@@ -6,6 +6,8 @@ import readExcelFile from "read-excel-file/browser";
 import {
   buildProcessWorkbookData,
   calculateProcessSummary,
+  type AttentionLevel,
+  type AutomationLevel,
   type ExcelRow,
   type LeanCategory,
   type ProcessSummary,
@@ -45,6 +47,54 @@ function getLeanLabel(category: LeanCategory): string {
   }
 
   return "Não classificado";
+}
+
+function getAttentionLabel(level: AttentionLevel): string {
+  if (level === "high") {
+    return "Alto";
+  }
+
+  if (level === "medium") {
+    return "Médio";
+  }
+
+  return "Baixo";
+}
+
+function getAutomationLabel(level: AutomationLevel): string {
+  if (level === "high") {
+    return "Alto";
+  }
+
+  if (level === "medium") {
+    return "Médio";
+  }
+
+  return "Baixo";
+}
+
+function getAttentionBadgeClass(level: AttentionLevel): string {
+  if (level === "high") {
+    return "border-red-900 bg-red-950/40 text-red-300";
+  }
+
+  if (level === "medium") {
+    return "border-amber-900 bg-amber-950/30 text-amber-300";
+  }
+
+  return "border-slate-700 bg-slate-800 text-slate-300";
+}
+
+function getAutomationBadgeClass(level: AutomationLevel): string {
+  if (level === "high") {
+    return "border-emerald-900 bg-emerald-950/30 text-emerald-300";
+  }
+
+  if (level === "medium") {
+    return "border-cyan-900 bg-cyan-950/30 text-cyan-300";
+  }
+
+  return "border-slate-700 bg-slate-800 text-slate-300";
 }
 
 export default function Home() {
@@ -396,6 +446,7 @@ export default function Home() {
                   <p className="text-sm text-slate-500">
                     Tempo de execução mapeado
                   </p>
+
                   <p className="mt-2 text-2xl font-semibold">
                     {summary.totalExecutionMinutes} min
                   </p>
@@ -405,6 +456,7 @@ export default function Home() {
                   <p className="text-sm text-slate-500">
                     Tempo de espera mapeado
                   </p>
+
                   <p className="mt-2 text-2xl font-semibold">
                     {summary.totalWaitingMinutes} min
                   </p>
@@ -414,6 +466,7 @@ export default function Home() {
                   <p className="text-sm text-cyan-300">
                     Carga mensal estimada
                   </p>
+
                   <p className="mt-2 text-2xl font-semibold text-cyan-100">
                     {summary.monthlyWorkloadHours} h
                   </p>
@@ -440,6 +493,7 @@ export default function Home() {
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span>Agrega valor</span>
+
                       <span className="text-slate-400">
                         {summary.lean.valueAddedPct}% ·{" "}
                         {summary.lean.valueAddedHours} h
@@ -459,6 +513,7 @@ export default function Home() {
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span>Necessário</span>
+
                       <span className="text-slate-400">
                         {summary.lean.necessaryPct}% ·{" "}
                         {summary.lean.necessaryHours} h
@@ -478,6 +533,7 @@ export default function Home() {
                   <div>
                     <div className="mb-2 flex justify-between text-sm">
                       <span>Desperdício</span>
+
                       <span className="text-slate-400">
                         {summary.lean.wastePct}% ·{" "}
                         {summary.lean.wasteHours} h
@@ -498,6 +554,7 @@ export default function Home() {
                     <div>
                       <div className="mb-2 flex justify-between text-sm">
                         <span>Não classificado</span>
+
                         <span className="text-slate-400">
                           {summary.lean.unclassifiedPct}% ·{" "}
                           {summary.lean.unclassifiedHours} h
@@ -572,10 +629,231 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+                <p className="text-sm font-medium text-amber-400">
+                  Sinais de gargalo
+                </p>
+
+                <h3 className="mt-2 text-xl font-semibold">
+                  Pontos que merecem investigação
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  A aplicação combina carga, espera, criticidade, SLA,
+                  retrabalho e execução manual. Os resultados indicam sinais de
+                  atenção, não uma conclusão definitiva de gargalo.
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  {summary.bottleneckCandidates.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+                      Nenhum sinal relevante foi identificado com os dados
+                      atuais.
+                    </div>
+                  )}
+
+                  {summary.bottleneckCandidates.map(
+                    (activity, index) => (
+                      <div
+                        key={`bottleneck-${activity.activityId}-${index}`}
+                        className="rounded-xl border border-slate-800 bg-slate-950 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              #{index + 1} · {activity.activityId}
+                            </p>
+
+                            <p className="mt-1 font-semibold">
+                              {activity.activityName || "Atividade"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {activity.responsible ||
+                                "Responsável não informado"}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getAttentionBadgeClass(
+                                activity.bottleneckLevel
+                              )}`}
+                            >
+                              Atenção{" "}
+                              {getAttentionLabel(activity.bottleneckLevel)}
+                            </span>
+
+                            <p className="mt-2 text-xs text-slate-500">
+                              Score: {activity.bottleneckScore}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                          <div className="rounded-lg border border-slate-800 p-3">
+                            <p className="text-xs text-slate-500">
+                              Carga mensal
+                            </p>
+
+                            <p className="mt-1 font-medium">
+                              {activity.monthlyWorkloadHours} h
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-800 p-3">
+                            <p className="text-xs text-slate-500">
+                              Espera
+                            </p>
+
+                            <p className="mt-1 font-medium">
+                              {activity.waitingMinutes} min
+                            </p>
+                          </div>
+
+                          <div className="rounded-lg border border-slate-800 p-3">
+                            <p className="text-xs text-slate-500">
+                              SLA
+                            </p>
+
+                            <p className="mt-1 font-medium">
+                              {activity.activitySla || "Não informado"}
+                            </p>
+                          </div>
+                        </div>
+
+                        {activity.bottleneckSignals.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                              Sinais identificados
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {activity.bottleneckSignals.map(
+                                (signal, signalIndex) => (
+                                  <span
+                                    key={`${signal}-${signalIndex}`}
+                                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
+                                  >
+                                    {signal}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+                <p className="text-sm font-medium text-emerald-400">
+                  Automação
+                </p>
+
+                <h3 className="mt-2 text-xl font-semibold">
+                  Oportunidades de automação
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  O potencial considera repetitividade, regras, estrutura dos
+                  dados, julgamento humano e tipo de execução.
+                </p>
+
+                <div className="mt-6 space-y-4">
+                  {summary.automationCandidates.length === 0 && (
+                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
+                      Nenhuma oportunidade relevante foi identificada com os
+                      dados atuais.
+                    </div>
+                  )}
+
+                  {summary.automationCandidates.map(
+                    (activity, index) => (
+                      <div
+                        key={`automation-${activity.activityId}-${index}`}
+                        className="rounded-xl border border-slate-800 bg-slate-950 p-5"
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              #{index + 1} · {activity.activityId}
+                            </p>
+
+                            <p className="mt-1 font-semibold">
+                              {activity.activityName || "Atividade"}
+                            </p>
+
+                            <p className="mt-1 text-xs text-slate-500">
+                              {activity.executionType ||
+                                "Execução não informada"}{" "}
+                              ·{" "}
+                              {activity.mainSystem ||
+                                "Sistema não informado"}
+                            </p>
+                          </div>
+
+                          <div className="text-right">
+                            <span
+                              className={`inline-flex rounded-full border px-3 py-1 text-xs font-medium ${getAutomationBadgeClass(
+                                activity.automationLevel
+                              )}`}
+                            >
+                              Potencial{" "}
+                              {getAutomationLabel(activity.automationLevel)}
+                            </span>
+
+                            <p className="mt-2 text-xs text-slate-500">
+                              Score: {activity.automationScore}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="mt-4 flex items-center justify-between rounded-lg border border-slate-800 p-3">
+                          <span className="text-xs text-slate-500">
+                            Carga mensal associada
+                          </span>
+
+                          <span className="font-medium text-cyan-300">
+                            {activity.monthlyWorkloadHours} h
+                          </span>
+                        </div>
+
+                        {activity.automationSignals.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                              Características identificadas
+                            </p>
+
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {activity.automationSignals.map(
+                                (signal, signalIndex) => (
+                                  <span
+                                    key={`${signal}-${signalIndex}`}
+                                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
+                                  >
+                                    {signal}
+                                  </span>
+                                )
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+
             <p className="text-xs leading-5 text-slate-500">
-              A classificação Lean e o ranking utilizam os dados cadastrados
-              no template. Os resultados funcionam como sinais analíticos e
-              devem ser interpretados em conjunto com o contexto do processo.
+              Os resultados apresentados são sinais analíticos gerados a partir
+              dos dados estruturados do template. A confirmação de gargalos e a
+              priorização de automações devem considerar o contexto operacional,
+              regras de negócio, riscos e viabilidade técnica.
             </p>
           </section>
         )}
