@@ -7,6 +7,7 @@ import {
   buildProcessWorkbookData,
   calculateProcessSummary,
   type ExcelRow,
+  type LeanCategory,
   type ProcessSummary,
   type ProcessWorkbookData,
 } from "@/lib/process-data";
@@ -29,6 +30,22 @@ type WorkbookSheet = {
   sheet: string;
   data: ExcelRow[];
 };
+
+function getLeanLabel(category: LeanCategory): string {
+  if (category === "valueAdded") {
+    return "Agrega valor";
+  }
+
+  if (category === "necessary") {
+    return "Necessário";
+  }
+
+  if (category === "waste") {
+    return "Desperdício";
+  }
+
+  return "Não classificado";
+}
 
 export default function Home() {
   const [fileName, setFileName] = useState("");
@@ -190,16 +207,15 @@ export default function Home() {
               </p>
 
               <h1 className="max-w-xl text-4xl font-semibold leading-tight sm:text-5xl">
-                Transforme dados estruturados de processos em
-                análises e informações visuais.
+                Transforme dados estruturados de processos em análises e
+                informações visuais.
               </h1>
 
               <p className="mt-6 max-w-xl text-lg leading-8 text-slate-400">
-                Utilize um template padronizado para transformar
-                informações operacionais em mapas de processo,
-                indicadores de carga de trabalho, análise Lean,
-                identificação de gargalos e oportunidades de
-                automação.
+                Utilize um template padronizado para transformar informações
+                operacionais em mapas de processo, indicadores de carga de
+                trabalho, análise Lean, identificação de gargalos e
+                oportunidades de automação.
               </p>
             </div>
 
@@ -210,8 +226,8 @@ export default function Home() {
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Selecione o template Excel do Process
-                  Intelligence para iniciar a análise.
+                  Selecione o template Excel do Process Intelligence para
+                  iniciar a análise.
                 </p>
               </div>
 
@@ -225,8 +241,7 @@ export default function Home() {
                 </span>
 
                 <span className="mt-2 text-sm text-slate-500">
-                  O arquivo será processado localmente no seu
-                  navegador.
+                  O arquivo será processado localmente no seu navegador.
                 </span>
 
                 <input
@@ -268,8 +283,7 @@ export default function Home() {
                               : "text-red-300"
                           }
                         >
-                          {sheet.found ? "✓" : "✕"}{" "}
-                          {sheet.name}
+                          {sheet.found ? "✓" : "✕"} {sheet.name}
                         </span>
 
                         <span className="text-slate-500">
@@ -289,8 +303,8 @@ export default function Home() {
 
                   {hasCriticalError && (
                     <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-red-300">
-                      ✕ Existem abas obrigatórias ausentes. O
-                      processo não pode ser analisado.
+                      ✕ Existem abas obrigatórias ausentes. O processo não pode
+                      ser analisado.
                     </p>
                   )}
                 </div>
@@ -316,8 +330,8 @@ export default function Home() {
         </section>
 
         {summary && (
-          <section className="mb-16 rounded-2xl border border-slate-800 bg-slate-900 p-8">
-            <div className="mb-8">
+          <section className="mb-16 space-y-6">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
               <p className="text-sm font-medium text-cyan-400">
                 Análise inicial
               </p>
@@ -328,8 +342,7 @@ export default function Home() {
 
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-400">
                 <span>
-                  Área:{" "}
-                  {summary.processArea || "Não informada"}
+                  Área: {summary.processArea || "Não informada"}
                 </span>
 
                 <span>•</span>
@@ -345,94 +358,230 @@ export default function Home() {
                   Versão: {summary.version || "Não informada"}
                 </span>
               </div>
-            </div>
 
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Etapas
-                </p>
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">Etapas</p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {summary.stages}
+                  </p>
+                </div>
 
-                <p className="mt-2 text-3xl font-semibold">
-                  {summary.stages}
-                </p>
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">Atividades</p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {summary.activities}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">Conexões</p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {summary.connections}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">
+                    Regras de negócio
+                  </p>
+                  <p className="mt-2 text-3xl font-semibold">
+                    {summary.businessRules}
+                  </p>
+                </div>
               </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Atividades
-                </p>
+              <div className="mt-4 grid gap-4 md:grid-cols-3">
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">
+                    Tempo de execução mapeado
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {summary.totalExecutionMinutes} min
+                  </p>
+                </div>
 
-                <p className="mt-2 text-3xl font-semibold">
-                  {summary.activities}
-                </p>
-              </div>
+                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+                  <p className="text-sm text-slate-500">
+                    Tempo de espera mapeado
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold">
+                    {summary.totalWaitingMinutes} min
+                  </p>
+                </div>
 
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Conexões
-                </p>
-
-                <p className="mt-2 text-3xl font-semibold">
-                  {summary.connections}
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Regras de negócio
-                </p>
-
-                <p className="mt-2 text-3xl font-semibold">
-                  {summary.businessRules}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Tempo de execução mapeado
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  {summary.totalExecutionMinutes} min
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                <p className="text-sm text-slate-500">
-                  Tempo de espera mapeado
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold">
-                  {summary.totalWaitingMinutes} min
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-5">
-                <p className="text-sm text-cyan-300">
-                  Carga mensal estimada
-                </p>
-
-                <p className="mt-2 text-2xl font-semibold text-cyan-100">
-                  {summary.monthlyWorkloadHours} h
-                </p>
+                <div className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-5">
+                  <p className="text-sm text-cyan-300">
+                    Carga mensal estimada
+                  </p>
+                  <p className="mt-2 text-2xl font-semibold text-cyan-100">
+                    {summary.monthlyWorkloadHours} h
+                  </p>
+                </div>
               </div>
             </div>
 
-            <p className="mt-5 text-xs leading-5 text-slate-500">
-              Os indicadores apresentados nesta etapa são
-              calculados a partir das atividades cadastradas no
-              template. Tempos de espera e execução são tratados
-              separadamente.
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+                <p className="text-sm font-medium text-cyan-400">
+                  Análise Lean
+                </p>
+
+                <h3 className="mt-2 text-xl font-semibold">
+                  Distribuição da carga mensal
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  A classificação considera a carga mensal estimada de cada
+                  atividade.
+                </p>
+
+                <div className="mt-6 space-y-5">
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span>Agrega valor</span>
+                      <span className="text-slate-400">
+                        {summary.lean.valueAddedPct}% ·{" "}
+                        {summary.lean.valueAddedHours} h
+                      </span>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-cyan-400"
+                        style={{
+                          width: `${summary.lean.valueAddedPct}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span>Necessário</span>
+                      <span className="text-slate-400">
+                        {summary.lean.necessaryPct}% ·{" "}
+                        {summary.lean.necessaryHours} h
+                      </span>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-slate-400"
+                        style={{
+                          width: `${summary.lean.necessaryPct}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="mb-2 flex justify-between text-sm">
+                      <span>Desperdício</span>
+                      <span className="text-slate-400">
+                        {summary.lean.wastePct}% ·{" "}
+                        {summary.lean.wasteHours} h
+                      </span>
+                    </div>
+
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                      <div
+                        className="h-full rounded-full bg-amber-400"
+                        style={{
+                          width: `${summary.lean.wastePct}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {summary.lean.unclassifiedHours > 0 && (
+                    <div>
+                      <div className="mb-2 flex justify-between text-sm">
+                        <span>Não classificado</span>
+                        <span className="text-slate-400">
+                          {summary.lean.unclassifiedPct}% ·{" "}
+                          {summary.lean.unclassifiedHours} h
+                        </span>
+                      </div>
+
+                      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+                        <div
+                          className="h-full rounded-full bg-slate-600"
+                          style={{
+                            width: `${summary.lean.unclassifiedPct}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+                <p className="text-sm font-medium text-cyan-400">
+                  Carga operacional
+                </p>
+
+                <h3 className="mt-2 text-xl font-semibold">
+                  Atividades com maior carga mensal
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-slate-500">
+                  Ranking baseado no esforço mensal estimado. Alta carga não
+                  significa automaticamente gargalo.
+                </p>
+
+                <div className="mt-6 space-y-3">
+                  {summary.topActivities.map((activity, index) => (
+                    <div
+                      key={`${activity.activityId}-${index}`}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="text-xs text-slate-500">
+                            #{index + 1}
+                          </p>
+
+                          <p className="mt-1 font-medium">
+                            {activity.activityName ||
+                              activity.activityId ||
+                              "Atividade"}
+                          </p>
+
+                          <p className="mt-1 text-xs text-slate-500">
+                            {activity.responsible ||
+                              "Responsável não informado"}{" "}
+                            · {getLeanLabel(activity.leanCategory)}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-lg font-semibold text-cyan-300">
+                            {activity.monthlyWorkloadHours} h
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            carga/mês
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <p className="text-xs leading-5 text-slate-500">
+              A classificação Lean e o ranking utilizam os dados cadastrados
+              no template. Os resultados funcionam como sinais analíticos e
+              devem ser interpretados em conjunto com o contexto do processo.
             </p>
           </section>
         )}
 
         <footer className="mt-auto border-t border-slate-800 pt-6 text-sm text-slate-500">
-          Dados estruturados → BPMN → Análises → Avaliação de
-          Automação
+          Dados estruturados → BPMN → Análises → Avaliação de Automação
         </footer>
       </div>
     </main>

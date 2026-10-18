@@ -12,18 +12,60 @@ export type ProcessWorkbookData = {
   regras: DataRecord[];
 };
 
+export type LeanCategory =
+  | "valueAdded"
+  | "necessary"
+  | "waste"
+  | "unclassified";
+
+export type ActivityInsight = {
+  activityId: string;
+  activityName: string;
+  responsible: string;
+  leanCategory: LeanCategory;
+
+  executionMinutes: number;
+  waitingMinutes: number;
+
+  people: number;
+  monthlyVolume: number;
+  occurrenceRate: number;
+
+  monthlyWorkloadHours: number;
+};
+
+export type LeanBreakdown = {
+  valueAddedHours: number;
+  necessaryHours: number;
+  wasteHours: number;
+  unclassifiedHours: number;
+
+  totalHours: number;
+
+  valueAddedPct: number;
+  necessaryPct: number;
+  wastePct: number;
+  unclassifiedPct: number;
+};
+
 export type ProcessSummary = {
   processName: string;
   processArea: string;
   processOwner: string;
   version: string;
+
   stages: number;
   activities: number;
   connections: number;
   businessRules: number;
+
   totalExecutionMinutes: number;
   totalWaitingMinutes: number;
   monthlyWorkloadHours: number;
+
+  lean: LeanBreakdown;
+
+  topActivities: ActivityInsight[];
 };
 
 function normalizeHeader(value: ExcelCell): string {
@@ -38,6 +80,14 @@ function normalizeHeader(value: ExcelCell): string {
 
 function normalizeText(value: ExcelCell): string {
   return String(value ?? "").trim();
+}
+
+function normalizeCategory(value: ExcelCell): string {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 function toNumber(value: ExcelCell): number {
@@ -59,7 +109,13 @@ function toNumber(value: ExcelCell): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function rowsToRecords(rows: ExcelRow[]): DataRecord[] {
+function round(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+export function rowsToRecords(
+  rows: ExcelRow[]
+): DataRecord[] {
   if (!rows || rows.length < 2) {
     return [];
   }
@@ -109,7 +165,10 @@ function getField(
     const normalizedName = normalizeHeader(name);
 
     if (
-      Object.prototype.hasOwnProperty.call(record, normalizedName) &&
+      Object.prototype.hasOwnProperty.call(
+        record,
+        normalizedName
+      ) &&
       record[normalizedName] !== null &&
       record[normalizedName] !== ""
     ) {
@@ -120,17 +179,70 @@ function getField(
   return null;
 }
 
-export function calculateProcessSummary(
+function getOccurrenceRate(
+  activity: DataRecord
+): number {
+  const value = getField(activity, [
+    "taxa_ocorrencia_pct",
+    "taxa de ocorrência pct",
+    "taxa_ocorrencia",
+  ]);
+
+  if (
+    value === null ||
+    value === undefined ||
+    value === ""
+  ) {
+    return 100;
+  }
+
+  return Math.min(
+    Math.max(toNumber(value), 0),
+    100
+  );
+}
+
+function getLeanCategory(
+  activity: DataRecord
+): LeanCategory {
+  const rawValue = getField(activity, [
+    "classificacao_lean",
+    "classificação lean",
+    "lean",
+  ]);
+
+  const value = normalizeCategory(rawValue);
+
+  if (
+    value === "agrega valor" ||
+    value === "valor agregado" ||
+    value === "value added"
+  ) {
+    return "valueAdded";
+  }
+
+  if (
+    value === "necessario" ||
+    value === "necessary"
+  ) {
+    return "necessary";
+  }
+
+  if (
+    value === "desperdicio" ||
+    value === "waste"
+  ) {
+    return "waste";
+  }
+
+  return "unclassified";
+}
+
+export function buildActivityInsights(
   data: ProcessWorkbookData
-): ProcessSummary {
-  const process = data.processo[0];
-
-  let totalExecutionMinutes = 0;
-  let totalWaitingMinutes = 0;
-  let monthlyWorkloadHours = 0;
-
-  data.atividades.forEach((activity) => {
-    const executionTime = toNumber(
+): ActivityInsight[] {
+  return data.atividades.map((activity) => {
+    const executionMinutes = toNumber(
       getField(activity, [
         "tempo_execucao_min",
         "tempo de execução min",
@@ -138,7 +250,7 @@ export function calculateProcessSummary(
       ])
     );
 
-    const waitingTime = toNumber(
+    const waitingMinutes = toNumber(
       getField(activity, [
         "tempo_espera_min",
         "tempo de espera min",
@@ -146,16 +258,16 @@ export function calculateProcessSummary(
       ])
     );
 
-    const people = Math.max(
-      toNumber(
-        getField(activity, [
-          "quantidade_pessoas",
-          "pessoas",
-          "qtd_pessoas",
-        ])
-      ),
-      1
-    );
+    const peopleValue = getField(activity, [
+      "pessoas",
+      "quantidade_pessoas",
+      "qtd_pessoas",
+    ]);
+
+    const people =
+      peopleValue === null
+        ? 1
+        : Math.max(toNumber(peopleValue), 1);
 
     const monthlyVolume = toNumber(
       getField(activity, [
@@ -165,36 +277,202 @@ export function calculateProcessSummary(
       ])
     );
 
-    let occurrenceRate = toNumber(
-      getField(activity, [
-        "taxa_ocorrencia_pct",
-        "taxa de ocorrência pct",
-        "taxa_ocorrencia",
-      ])
-    );
+    const occurrenceRate =
+      getOccurrenceRate(activity);
 
-    if (occurrenceRate === 0) {
-      occurrenceRate = 100;
-    }
-
-    totalExecutionMinutes += executionTime;
-    totalWaitingMinutes += waitingTime;
-
-    monthlyWorkloadHours +=
-      (executionTime *
+    const monthlyWorkloadHours =
+      (executionMinutes *
         people *
         monthlyVolume *
         (occurrenceRate / 100)) /
       60;
+
+    return {
+      activityId: normalizeText(
+        getField(activity, [
+          "atividade_id",
+          "id_atividade",
+        ])
+      ),
+
+      activityName: normalizeText(
+        getField(activity, [
+          "atividade",
+          "nome_atividade",
+          "nome da atividade",
+        ])
+      ),
+
+      responsible: normalizeText(
+        getField(activity, [
+          "papel_responsavel",
+          "papel responsável",
+          "responsavel",
+          "responsável",
+          "papel",
+        ])
+      ),
+
+      leanCategory:
+        getLeanCategory(activity),
+
+      executionMinutes,
+      waitingMinutes,
+      people,
+      monthlyVolume,
+      occurrenceRate,
+
+      monthlyWorkloadHours:
+        round(monthlyWorkloadHours),
+    };
   });
+}
+
+function calculateLeanBreakdown(
+  activities: ActivityInsight[]
+): LeanBreakdown {
+  let valueAddedHours = 0;
+  let necessaryHours = 0;
+  let wasteHours = 0;
+  let unclassifiedHours = 0;
+
+  activities.forEach((activity) => {
+    if (
+      activity.leanCategory === "valueAdded"
+    ) {
+      valueAddedHours +=
+        activity.monthlyWorkloadHours;
+    }
+
+    if (
+      activity.leanCategory === "necessary"
+    ) {
+      necessaryHours +=
+        activity.monthlyWorkloadHours;
+    }
+
+    if (
+      activity.leanCategory === "waste"
+    ) {
+      wasteHours +=
+        activity.monthlyWorkloadHours;
+    }
+
+    if (
+      activity.leanCategory === "unclassified"
+    ) {
+      unclassifiedHours +=
+        activity.monthlyWorkloadHours;
+    }
+  });
+
+  const totalHours =
+    valueAddedHours +
+    necessaryHours +
+    wasteHours +
+    unclassifiedHours;
+
+  function percentage(
+    value: number
+  ): number {
+    if (totalHours === 0) {
+      return 0;
+    }
+
+    return round(
+      (value / totalHours) * 100
+    );
+  }
+
+  return {
+    valueAddedHours:
+      round(valueAddedHours),
+
+    necessaryHours:
+      round(necessaryHours),
+
+    wasteHours:
+      round(wasteHours),
+
+    unclassifiedHours:
+      round(unclassifiedHours),
+
+    totalHours:
+      round(totalHours),
+
+    valueAddedPct:
+      percentage(valueAddedHours),
+
+    necessaryPct:
+      percentage(necessaryHours),
+
+    wastePct:
+      percentage(wasteHours),
+
+    unclassifiedPct:
+      percentage(unclassifiedHours),
+  };
+}
+
+export function calculateProcessSummary(
+  data: ProcessWorkbookData
+): ProcessSummary {
+  const process = data.processo[0];
+
+  const activityInsights =
+    buildActivityInsights(data);
+
+  const totalExecutionMinutes =
+    activityInsights.reduce(
+      (total, activity) =>
+        total + activity.executionMinutes,
+      0
+    );
+
+  const totalWaitingMinutes =
+    activityInsights.reduce(
+      (total, activity) =>
+        total + activity.waitingMinutes,
+      0
+    );
+
+  const monthlyWorkloadHours =
+    activityInsights.reduce(
+      (total, activity) =>
+        total +
+        activity.monthlyWorkloadHours,
+      0
+    );
+
+  const lean =
+    calculateLeanBreakdown(
+      activityInsights
+    );
+
+  const topActivities = [
+    ...activityInsights,
+  ]
+    .sort(
+      (a, b) =>
+        b.monthlyWorkloadHours -
+        a.monthlyWorkloadHours
+    )
+    .slice(0, 5);
 
   return {
     processName: normalizeText(
-      getField(process, ["nome_processo", "nome do processo"])
+      getField(process, [
+        "nome_processo",
+        "nome do processo",
+      ])
     ),
 
     processArea: normalizeText(
-      getField(process, ["area_dona", "área dona", "area"])
+      getField(process, [
+        "area_dona",
+        "área dona",
+        "area",
+      ])
     ),
 
     processOwner: normalizeText(
@@ -206,7 +484,10 @@ export function calculateProcessSummary(
     ),
 
     version: normalizeText(
-      getField(process, ["versao", "versão"])
+      getField(process, [
+        "versao",
+        "versão",
+      ])
     ),
 
     stages: data.etapas.length,
@@ -214,8 +495,17 @@ export function calculateProcessSummary(
     connections: data.conexoes.length,
     businessRules: data.regras.length,
 
-    totalExecutionMinutes: Math.round(totalExecutionMinutes * 10) / 10,
-    totalWaitingMinutes: Math.round(totalWaitingMinutes * 10) / 10,
-    monthlyWorkloadHours: Math.round(monthlyWorkloadHours * 10) / 10,
+    totalExecutionMinutes:
+      round(totalExecutionMinutes),
+
+    totalWaitingMinutes:
+      round(totalWaitingMinutes),
+
+    monthlyWorkloadHours:
+      round(monthlyWorkloadHours),
+
+    lean,
+
+    topActivities,
   };
 }
