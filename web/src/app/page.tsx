@@ -14,6 +14,12 @@ import {
   type ProcessWorkbookData,
 } from "@/lib/process-data";
 
+import {
+  calculateAutomationPriorities,
+  type AutomationPriority,
+  type PriorityLevel,
+} from "@/lib/automation-priority";
+
 const REQUIRED_SHEETS = [
   "PROCESSO",
   "ETAPAS",
@@ -61,7 +67,7 @@ function getAttentionLabel(level: AttentionLevel): string {
   return "Baixo";
 }
 
-function getAutomationLabel(level: AutomationLevel): string {
+function getAutomationLabel(level: AutomationLevel | string): string {
   if (level === "high") {
     return "Alto";
   }
@@ -71,6 +77,18 @@ function getAutomationLabel(level: AutomationLevel): string {
   }
 
   return "Baixo";
+}
+
+function getPriorityLabel(level: PriorityLevel): string {
+  if (level === "high") {
+    return "Alta";
+  }
+
+  if (level === "medium") {
+    return "Média";
+  }
+
+  return "Baixa";
 }
 
 function getAttentionBadgeClass(level: AttentionLevel): string {
@@ -85,13 +103,27 @@ function getAttentionBadgeClass(level: AttentionLevel): string {
   return "border-slate-700 bg-slate-800 text-slate-300";
 }
 
-function getAutomationBadgeClass(level: AutomationLevel): string {
+function getAutomationBadgeClass(
+  level: AutomationLevel | string
+): string {
   if (level === "high") {
     return "border-emerald-900 bg-emerald-950/30 text-emerald-300";
   }
 
   if (level === "medium") {
     return "border-cyan-900 bg-cyan-950/30 text-cyan-300";
+  }
+
+  return "border-slate-700 bg-slate-800 text-slate-300";
+}
+
+function getPriorityBadgeClass(level: PriorityLevel): string {
+  if (level === "high") {
+    return "border-emerald-800 bg-emerald-950/40 text-emerald-300";
+  }
+
+  if (level === "medium") {
+    return "border-amber-800 bg-amber-950/30 text-amber-300";
   }
 
   return "border-slate-700 bg-slate-800 text-slate-300";
@@ -108,6 +140,9 @@ export default function Home() {
 
   const [summary, setSummary] =
     useState<ProcessSummary | null>(null);
+
+  const [automationPriorities, setAutomationPriorities] =
+    useState<AutomationPriority[]>([]);
 
   const hasCriticalError =
     validation.length > 0 &&
@@ -126,6 +161,7 @@ export default function Home() {
     setValidation([]);
     setProcessData(null);
     setSummary(null);
+    setAutomationPriorities([]);
 
     if (!file) {
       setFileName("");
@@ -138,6 +174,7 @@ export default function Home() {
       setError(
         "Formato inválido. Selecione um arquivo .xlsx."
       );
+
       return;
     }
 
@@ -148,7 +185,9 @@ export default function Home() {
         file
       )) as unknown as WorkbookSheet[];
 
-      function getSheet(name: string): WorkbookSheet | undefined {
+      function getSheet(
+        name: string
+      ): WorkbookSheet | undefined {
         return workbook.find(
           (item) =>
             item.sheet.trim().toUpperCase() ===
@@ -156,24 +195,31 @@ export default function Home() {
         );
       }
 
-      const validationResult = REQUIRED_SHEETS.map(
-        (requiredSheet) => {
-          const sheet = getSheet(requiredSheet);
+      const validationResult =
+        REQUIRED_SHEETS.map(
+          (requiredSheet) => {
+            const sheet =
+              getSheet(requiredSheet);
 
-          return {
-            name: requiredSheet,
-            found: Boolean(sheet),
-            rows: sheet
-              ? Math.max(sheet.data.length - 1, 0)
-              : 0,
-          };
-        }
-      );
+            return {
+              name: requiredSheet,
+              found: Boolean(sheet),
+              rows: sheet
+                ? Math.max(
+                    sheet.data.length - 1,
+                    0
+                  )
+                : 0,
+            };
+          }
+        );
 
       setValidation(validationResult);
 
       const allRequiredSheetsExist =
-        validationResult.every((sheet) => sheet.found);
+        validationResult.every(
+          (sheet) => sheet.found
+        );
 
       if (!allRequiredSheetsExist) {
         setProcessData(null);
@@ -197,13 +243,14 @@ export default function Home() {
         return;
       }
 
-      const structuredData = buildProcessWorkbookData({
-        PROCESSO: processo.data,
-        ETAPAS: etapas.data,
-        ATIVIDADES: atividades.data,
-        CONEXOES: conexoes.data,
-        REGRAS: regras.data,
-      });
+      const structuredData =
+        buildProcessWorkbookData({
+          PROCESSO: processo.data,
+          ETAPAS: etapas.data,
+          ATIVIDADES: atividades.data,
+          CONEXOES: conexoes.data,
+          REGRAS: regras.data,
+        });
 
       setProcessData(structuredData);
     } catch (err) {
@@ -225,9 +272,17 @@ export default function Home() {
     }
 
     const processSummary =
-      calculateProcessSummary(processData);
+      calculateProcessSummary(
+        processData
+      );
+
+    const priorities =
+      calculateAutomationPriorities(
+        processData
+      );
 
     setSummary(processSummary);
+    setAutomationPriorities(priorities);
   }
 
   return (
@@ -287,7 +342,8 @@ export default function Home() {
                 </div>
 
                 <span className="font-medium">
-                  {fileName || "Selecionar arquivo .xlsx"}
+                  {fileName ||
+                    "Selecionar arquivo .xlsx"}
                 </span>
 
                 <span className="mt-2 text-sm text-slate-500">
@@ -314,51 +370,57 @@ export default function Home() {
                 </div>
               )}
 
-              {validation.length > 0 && !isReading && (
-                <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
-                  <p className="mb-3 text-sm font-semibold text-slate-200">
-                    Validação do template
-                  </p>
+              {validation.length > 0 &&
+                !isReading && (
+                  <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
+                    <p className="mb-3 text-sm font-semibold text-slate-200">
+                      Validação do template
+                    </p>
 
-                  <div className="space-y-2">
-                    {validation.map((sheet) => (
-                      <div
-                        key={sheet.name}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <span
-                          className={
-                            sheet.found
-                              ? "text-slate-300"
-                              : "text-red-300"
-                          }
-                        >
-                          {sheet.found ? "✓" : "✕"} {sheet.name}
-                        </span>
+                    <div className="space-y-2">
+                      {validation.map(
+                        (sheet) => (
+                          <div
+                            key={sheet.name}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span
+                              className={
+                                sheet.found
+                                  ? "text-slate-300"
+                                  : "text-red-300"
+                              }
+                            >
+                              {sheet.found
+                                ? "✓"
+                                : "✕"}{" "}
+                              {sheet.name}
+                            </span>
 
-                        <span className="text-slate-500">
-                          {sheet.found
-                            ? `${sheet.rows} registros`
-                            : "não encontrada"}
-                        </span>
-                      </div>
-                    ))}
+                            <span className="text-slate-500">
+                              {sheet.found
+                                ? `${sheet.rows} registros`
+                                : "não encontrada"}
+                            </span>
+                          </div>
+                        )
+                      )}
+                    </div>
+
+                    {isValidWorkbook && (
+                      <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-emerald-400">
+                        ✓ Estrutura mínima do template validada.
+                      </p>
+                    )}
+
+                    {hasCriticalError && (
+                      <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-red-300">
+                        ✕ Existem abas obrigatórias ausentes. O processo não
+                        pode ser analisado.
+                      </p>
+                    )}
                   </div>
-
-                  {isValidWorkbook && (
-                    <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-emerald-400">
-                      ✓ Estrutura mínima do template validada.
-                    </p>
-                  )}
-
-                  {hasCriticalError && (
-                    <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-red-300">
-                      ✕ Existem abas obrigatórias ausentes. O processo não pode
-                      ser analisado.
-                    </p>
-                  )}
-                </div>
-              )}
+                )}
 
               <button
                 disabled={!isValidWorkbook}
@@ -387,80 +449,74 @@ export default function Home() {
               </p>
 
               <h2 className="mt-2 text-3xl font-semibold">
-                {summary.processName || "Processo analisado"}
+                {summary.processName ||
+                  "Processo analisado"}
               </h2>
 
               <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-400">
                 <span>
-                  Área: {summary.processArea || "Não informada"}
+                  Área:{" "}
+                  {summary.processArea ||
+                    "Não informada"}
                 </span>
 
                 <span>•</span>
 
                 <span>
                   Responsável:{" "}
-                  {summary.processOwner || "Não informado"}
+                  {summary.processOwner ||
+                    "Não informado"}
                 </span>
 
                 <span>•</span>
 
                 <span>
-                  Versão: {summary.version || "Não informada"}
+                  Versão:{" "}
+                  {summary.version ||
+                    "Não informada"}
                 </span>
               </div>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">Etapas</p>
-                  <p className="mt-2 text-3xl font-semibold">
-                    {summary.stages}
-                  </p>
-                </div>
+                <MetricCard
+                  label="Etapas"
+                  value={String(
+                    summary.stages
+                  )}
+                />
 
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">Atividades</p>
-                  <p className="mt-2 text-3xl font-semibold">
-                    {summary.activities}
-                  </p>
-                </div>
+                <MetricCard
+                  label="Atividades"
+                  value={String(
+                    summary.activities
+                  )}
+                />
 
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">Conexões</p>
-                  <p className="mt-2 text-3xl font-semibold">
-                    {summary.connections}
-                  </p>
-                </div>
+                <MetricCard
+                  label="Conexões"
+                  value={String(
+                    summary.connections
+                  )}
+                />
 
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">
-                    Regras de negócio
-                  </p>
-                  <p className="mt-2 text-3xl font-semibold">
-                    {summary.businessRules}
-                  </p>
-                </div>
+                <MetricCard
+                  label="Regras de negócio"
+                  value={String(
+                    summary.businessRules
+                  )}
+                />
               </div>
 
               <div className="mt-4 grid gap-4 md:grid-cols-3">
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">
-                    Tempo de execução mapeado
-                  </p>
+                <MetricCard
+                  label="Tempo de execução mapeado"
+                  value={`${summary.totalExecutionMinutes} min`}
+                />
 
-                  <p className="mt-2 text-2xl font-semibold">
-                    {summary.totalExecutionMinutes} min
-                  </p>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
-                  <p className="text-sm text-slate-500">
-                    Tempo de espera mapeado
-                  </p>
-
-                  <p className="mt-2 text-2xl font-semibold">
-                    {summary.totalWaitingMinutes} min
-                  </p>
-                </div>
+                <MetricCard
+                  label="Tempo de espera mapeado"
+                  value={`${summary.totalWaitingMinutes} min`}
+                />
 
                 <div className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-5">
                   <p className="text-sm text-cyan-300">
@@ -490,86 +546,60 @@ export default function Home() {
                 </p>
 
                 <div className="mt-6 space-y-5">
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span>Agrega valor</span>
+                  <LeanRow
+                    label="Agrega valor"
+                    percentage={
+                      summary.lean
+                        .valueAddedPct
+                    }
+                    hours={
+                      summary.lean
+                        .valueAddedHours
+                    }
+                    barClass="bg-cyan-400"
+                  />
 
-                      <span className="text-slate-400">
-                        {summary.lean.valueAddedPct}% ·{" "}
-                        {summary.lean.valueAddedHours} h
-                      </span>
-                    </div>
+                  <LeanRow
+                    label="Necessário"
+                    percentage={
+                      summary.lean
+                        .necessaryPct
+                    }
+                    hours={
+                      summary.lean
+                        .necessaryHours
+                    }
+                    barClass="bg-slate-400"
+                  />
 
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-cyan-400"
-                        style={{
-                          width: `${summary.lean.valueAddedPct}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
+                  <LeanRow
+                    label="Desperdício"
+                    percentage={
+                      summary.lean
+                        .wastePct
+                    }
+                    hours={
+                      summary.lean
+                        .wasteHours
+                    }
+                    barClass="bg-amber-400"
+                  />
 
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span>Necessário</span>
-
-                      <span className="text-slate-400">
-                        {summary.lean.necessaryPct}% ·{" "}
-                        {summary.lean.necessaryHours} h
-                      </span>
-                    </div>
-
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-slate-400"
-                        style={{
-                          width: `${summary.lean.necessaryPct}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <div className="mb-2 flex justify-between text-sm">
-                      <span>Desperdício</span>
-
-                      <span className="text-slate-400">
-                        {summary.lean.wastePct}% ·{" "}
-                        {summary.lean.wasteHours} h
-                      </span>
-                    </div>
-
-                    <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                      <div
-                        className="h-full rounded-full bg-amber-400"
-                        style={{
-                          width: `${summary.lean.wastePct}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-
-                  {summary.lean.unclassifiedHours > 0 && (
-                    <div>
-                      <div className="mb-2 flex justify-between text-sm">
-                        <span>Não classificado</span>
-
-                        <span className="text-slate-400">
-                          {summary.lean.unclassifiedPct}% ·{" "}
-                          {summary.lean.unclassifiedHours} h
-                        </span>
-                      </div>
-
-                      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
-                        <div
-                          className="h-full rounded-full bg-slate-600"
-                          style={{
-                            width: `${summary.lean.unclassifiedPct}%`,
-                          }}
-                        />
-                      </div>
-                    </div>
+                  {summary.lean
+                    .unclassifiedHours >
+                    0 && (
+                    <LeanRow
+                      label="Não classificado"
+                      percentage={
+                        summary.lean
+                          .unclassifiedPct
+                      }
+                      hours={
+                        summary.lean
+                          .unclassifiedHours
+                      }
+                      barClass="bg-slate-600"
+                    />
                   )}
                 </div>
               </div>
@@ -589,42 +619,50 @@ export default function Home() {
                 </p>
 
                 <div className="mt-6 space-y-3">
-                  {summary.topActivities.map((activity, index) => (
-                    <div
-                      key={`${activity.activityId}-${index}`}
-                      className="rounded-xl border border-slate-800 bg-slate-950 p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="text-xs text-slate-500">
-                            #{index + 1}
-                          </p>
+                  {summary.topActivities.map(
+                    (activity, index) => (
+                      <div
+                        key={`${activity.activityId}-${index}`}
+                        className="rounded-xl border border-slate-800 bg-slate-950 p-4"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div>
+                            <p className="text-xs text-slate-500">
+                              #{index + 1}
+                            </p>
 
-                          <p className="mt-1 font-medium">
-                            {activity.activityName ||
-                              activity.activityId ||
-                              "Atividade"}
-                          </p>
+                            <p className="mt-1 font-medium">
+                              {activity.activityName ||
+                                activity.activityId ||
+                                "Atividade"}
+                            </p>
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {activity.responsible ||
-                              "Responsável não informado"}{" "}
-                            · {getLeanLabel(activity.leanCategory)}
-                          </p>
-                        </div>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {activity.responsible ||
+                                "Responsável não informado"}{" "}
+                              ·{" "}
+                              {getLeanLabel(
+                                activity.leanCategory
+                              )}
+                            </p>
+                          </div>
 
-                        <div className="text-right">
-                          <p className="text-lg font-semibold text-cyan-300">
-                            {activity.monthlyWorkloadHours} h
-                          </p>
+                          <div className="text-right">
+                            <p className="text-lg font-semibold text-cyan-300">
+                              {
+                                activity.monthlyWorkloadHours
+                              }{" "}
+                              h
+                            </p>
 
-                          <p className="text-xs text-slate-500">
-                            carga/mês
-                          </p>
+                            <p className="text-xs text-slate-500">
+                              carga/mês
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
             </div>
@@ -641,18 +679,10 @@ export default function Home() {
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   A aplicação combina carga, espera, criticidade, SLA,
-                  retrabalho e execução manual. Os resultados indicam sinais de
-                  atenção, não uma conclusão definitiva de gargalo.
+                  retrabalho e execução manual.
                 </p>
 
                 <div className="mt-6 space-y-4">
-                  {summary.bottleneckCandidates.length === 0 && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
-                      Nenhum sinal relevante foi identificado com os dados
-                      atuais.
-                    </div>
-                  )}
-
                   {summary.bottleneckCandidates.map(
                     (activity, index) => (
                       <div
@@ -662,11 +692,12 @@ export default function Home() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="text-xs text-slate-500">
-                              #{index + 1} · {activity.activityId}
+                              #{index + 1} ·{" "}
+                              {activity.activityId}
                             </p>
 
                             <p className="mt-1 font-semibold">
-                              {activity.activityName || "Atividade"}
+                              {activity.activityName}
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">
@@ -682,67 +713,46 @@ export default function Home() {
                               )}`}
                             >
                               Atenção{" "}
-                              {getAttentionLabel(activity.bottleneckLevel)}
+                              {getAttentionLabel(
+                                activity.bottleneckLevel
+                              )}
                             </span>
 
                             <p className="mt-2 text-xs text-slate-500">
-                              Score: {activity.bottleneckScore}
+                              Score:{" "}
+                              {
+                                activity.bottleneckScore
+                              }
                             </p>
                           </div>
                         </div>
 
                         <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                          <div className="rounded-lg border border-slate-800 p-3">
-                            <p className="text-xs text-slate-500">
-                              Carga mensal
-                            </p>
+                          <SmallMetric
+                            label="Carga mensal"
+                            value={`${activity.monthlyWorkloadHours} h`}
+                          />
 
-                            <p className="mt-1 font-medium">
-                              {activity.monthlyWorkloadHours} h
-                            </p>
-                          </div>
+                          <SmallMetric
+                            label="Espera"
+                            value={`${activity.waitingMinutes} min`}
+                          />
 
-                          <div className="rounded-lg border border-slate-800 p-3">
-                            <p className="text-xs text-slate-500">
-                              Espera
-                            </p>
-
-                            <p className="mt-1 font-medium">
-                              {activity.waitingMinutes} min
-                            </p>
-                          </div>
-
-                          <div className="rounded-lg border border-slate-800 p-3">
-                            <p className="text-xs text-slate-500">
-                              SLA
-                            </p>
-
-                            <p className="mt-1 font-medium">
-                              {activity.activitySla || "Não informado"}
-                            </p>
-                          </div>
+                          <SmallMetric
+                            label="SLA"
+                            value={
+                              activity.activitySla ||
+                              "Não informado"
+                            }
+                          />
                         </div>
 
-                        {activity.bottleneckSignals.length > 0 && (
-                          <div className="mt-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                              Sinais identificados
-                            </p>
-
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {activity.bottleneckSignals.map(
-                                (signal, signalIndex) => (
-                                  <span
-                                    key={`${signal}-${signalIndex}`}
-                                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
-                                  >
-                                    {signal}
-                                  </span>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
+                        <SignalList
+                          title="Sinais identificados"
+                          signals={
+                            activity.bottleneckSignals
+                          }
+                        />
                       </div>
                     )
                   )}
@@ -764,13 +774,6 @@ export default function Home() {
                 </p>
 
                 <div className="mt-6 space-y-4">
-                  {summary.automationCandidates.length === 0 && (
-                    <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 text-sm text-slate-400">
-                      Nenhuma oportunidade relevante foi identificada com os
-                      dados atuais.
-                    </div>
-                  )}
-
                   {summary.automationCandidates.map(
                     (activity, index) => (
                       <div
@@ -780,11 +783,12 @@ export default function Home() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="text-xs text-slate-500">
-                              #{index + 1} · {activity.activityId}
+                              #{index + 1} ·{" "}
+                              {activity.activityId}
                             </p>
 
                             <p className="mt-1 font-semibold">
-                              {activity.activityName || "Atividade"}
+                              {activity.activityName}
                             </p>
 
                             <p className="mt-1 text-xs text-slate-500">
@@ -803,11 +807,16 @@ export default function Home() {
                               )}`}
                             >
                               Potencial{" "}
-                              {getAutomationLabel(activity.automationLevel)}
+                              {getAutomationLabel(
+                                activity.automationLevel
+                              )}
                             </span>
 
                             <p className="mt-2 text-xs text-slate-500">
-                              Score: {activity.automationScore}
+                              Score:{" "}
+                              {
+                                activity.automationScore
+                              }
                             </p>
                           </div>
                         </div>
@@ -818,30 +827,19 @@ export default function Home() {
                           </span>
 
                           <span className="font-medium text-cyan-300">
-                            {activity.monthlyWorkloadHours} h
+                            {
+                              activity.monthlyWorkloadHours
+                            }{" "}
+                            h
                           </span>
                         </div>
 
-                        {activity.automationSignals.length > 0 && (
-                          <div className="mt-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                              Características identificadas
-                            </p>
-
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {activity.automationSignals.map(
-                                (signal, signalIndex) => (
-                                  <span
-                                    key={`${signal}-${signalIndex}`}
-                                    className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
-                                  >
-                                    {signal}
-                                  </span>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
+                        <SignalList
+                          title="Características identificadas"
+                          signals={
+                            activity.automationSignals
+                          }
+                        />
                       </div>
                     )
                   )}
@@ -849,11 +847,129 @@ export default function Home() {
               </div>
             </div>
 
+            <div className="rounded-2xl border border-emerald-900/60 bg-slate-900 p-8">
+              <p className="text-sm font-medium text-emerald-400">
+                Priorização
+              </p>
+
+              <h3 className="mt-2 text-2xl font-semibold">
+                Prioridade de automação
+              </h3>
+
+              <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                O ranking combina a viabilidade de automação com o impacto
+                operacional. O objetivo é indicar quais oportunidades merecem
+                ser avaliadas primeiro.
+              </p>
+
+              <div className="mt-8 grid gap-4">
+                {automationPriorities.map(
+                  (activity, index) => (
+                    <div
+                      key={`priority-${activity.activityId}-${index}`}
+                      className="rounded-xl border border-slate-800 bg-slate-950 p-5"
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-5">
+                        <div>
+                          <p className="text-xs font-medium text-emerald-400">
+                            PRIORIDADE #{index + 1}
+                          </p>
+
+                          <h4 className="mt-1 text-lg font-semibold">
+                            {activity.activityName ||
+                              activity.activityId}
+                          </h4>
+
+                          <p className="mt-1 text-sm text-slate-500">
+                            {activity.responsible ||
+                              "Responsável não informado"}{" "}
+                            ·{" "}
+                            {activity.mainSystem ||
+                              "Sistema não informado"}
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${getPriorityBadgeClass(
+                              activity.priorityLevel
+                            )}`}
+                          >
+                            Prioridade{" "}
+                            {getPriorityLabel(
+                              activity.priorityLevel
+                            )}
+                          </span>
+
+                          <p className="mt-2 text-3xl font-semibold text-emerald-300">
+                            {activity.priorityScore}
+                          </p>
+
+                          <p className="text-xs text-slate-500">
+                            de 100
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                        <SmallMetric
+                          label="Viabilidade"
+                          value={`${activity.automationScore}/9`}
+                        />
+
+                        <SmallMetric
+                          label="Impacto operacional"
+                          value={`${activity.impactScore}/10`}
+                        />
+
+                        <SmallMetric
+                          label="Carga associada"
+                          value={`${activity.monthlyWorkloadHours} h/mês`}
+                        />
+                      </div>
+
+                      {activity.priorityReasons.length >
+                        0 && (
+                        <div className="mt-5">
+                          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                            Razões da priorização
+                          </p>
+
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {activity.priorityReasons.map(
+                              (
+                                reason,
+                                reasonIndex
+                              ) => (
+                                <span
+                                  key={`${reason}-${reasonIndex}`}
+                                  className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
+                                >
+                                  {reason}
+                                </span>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )
+                )}
+              </div>
+
+              <div className="mt-6 rounded-xl border border-slate-800 bg-slate-950/60 p-4 text-xs leading-5 text-slate-500">
+                A prioridade é um indicador de apoio à decisão. Antes de iniciar
+                uma automação, ainda devem ser avaliados custo, risco,
+                disponibilidade de integração, segurança, dependências e
+                retorno esperado.
+              </div>
+            </div>
+
             <p className="text-xs leading-5 text-slate-500">
               Os resultados apresentados são sinais analíticos gerados a partir
               dos dados estruturados do template. A confirmação de gargalos e a
-              priorização de automações devem considerar o contexto operacional,
-              regras de negócio, riscos e viabilidade técnica.
+              priorização de automações devem considerar o contexto
+              operacional, regras de negócio, riscos e viabilidade técnica.
             </p>
           </section>
         )}
@@ -863,5 +979,111 @@ export default function Home() {
         </footer>
       </div>
     </main>
+  );
+}
+
+function MetricCard({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-950 p-5">
+      <p className="text-sm text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-2 text-3xl font-semibold">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function SmallMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="rounded-lg border border-slate-800 p-3">
+      <p className="text-xs text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-1 font-medium">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function LeanRow({
+  label,
+  percentage,
+  hours,
+  barClass,
+}: {
+  label: string;
+  percentage: number;
+  hours: number;
+  barClass: string;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex justify-between text-sm">
+        <span>{label}</span>
+
+        <span className="text-slate-400">
+          {percentage}% · {hours} h
+        </span>
+      </div>
+
+      <div className="h-2 overflow-hidden rounded-full bg-slate-800">
+        <div
+          className={`h-full rounded-full ${barClass}`}
+          style={{
+            width: `${percentage}%`,
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SignalList({
+  title,
+  signals,
+}: {
+  title: string;
+  signals: string[];
+}) {
+  if (signals.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        {title}
+      </p>
+
+      <div className="mt-2 flex flex-wrap gap-2">
+        {signals.map(
+          (signal, index) => (
+            <span
+              key={`${signal}-${index}`}
+              className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
+            >
+              {signal}
+            </span>
+          )
+        )}
+      </div>
+    </div>
   );
 }
