@@ -4,6 +4,7 @@ import { ChangeEvent, useState } from "react";
 import readExcelFile from "read-excel-file/browser";
 
 import ProcessMap from "@/components/process-map";
+import TemplateValidationPanel from "@/components/template-validation-panel";
 
 import {
   buildProcessWorkbookData,
@@ -33,6 +34,11 @@ import {
   type ProcessFlowModel,
 } from "@/lib/process-flow";
 
+import {
+  validateProcessTemplate,
+  type TemplateValidationResult,
+} from "@/lib/template-validation";
+
 const REQUIRED_SHEETS = [
   "PROCESSO",
   "ETAPAS",
@@ -52,7 +58,9 @@ type WorkbookSheet = {
   data: ExcelRow[];
 };
 
-function getLeanLabel(category: LeanCategory): string {
+function getLeanLabel(
+  category: LeanCategory
+): string {
   if (category === "valueAdded") {
     return "Agrega valor";
   }
@@ -68,7 +76,9 @@ function getLeanLabel(category: LeanCategory): string {
   return "Não classificado";
 }
 
-function getAttentionLabel(level: AttentionLevel): string {
+function getAttentionLabel(
+  level: AttentionLevel
+): string {
   if (level === "high") {
     return "Alto";
   }
@@ -94,7 +104,9 @@ function getAutomationLabel(
   return "Baixo";
 }
 
-function getPriorityLabel(level: PriorityLevel): string {
+function getPriorityLabel(
+  level: PriorityLevel
+): string {
   if (level === "high") {
     return "Alta";
   }
@@ -163,34 +175,67 @@ function getDecisionBadgeClass(
 }
 
 export default function Home() {
-  const [fileName, setFileName] = useState("");
+  const [fileName, setFileName] =
+    useState("");
 
-  const [validation, setValidation] =
-    useState<SheetValidation[]>([]);
+  const [
+    validation,
+    setValidation,
+  ] = useState<SheetValidation[]>([]);
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
-  const [isReading, setIsReading] =
-    useState(false);
+  const [
+    isReading,
+    setIsReading,
+  ] = useState(false);
 
-  const [processData, setProcessData] =
-    useState<ProcessWorkbookData | null>(null);
+  const [
+    processData,
+    setProcessData,
+  ] =
+    useState<ProcessWorkbookData | null>(
+      null
+    );
 
-  const [summary, setSummary] =
-    useState<ProcessSummary | null>(null);
+  const [
+    summary,
+    setSummary,
+  ] =
+    useState<ProcessSummary | null>(
+      null
+    );
 
-  const [flowModel, setFlowModel] =
-    useState<ProcessFlowModel | null>(null);
+  const [
+    flowModel,
+    setFlowModel,
+  ] =
+    useState<ProcessFlowModel | null>(
+      null
+    );
+
+  const [
+    templateValidation,
+    setTemplateValidation,
+  ] =
+    useState<TemplateValidationResult | null>(
+      null
+    );
 
   const [
     automationPriorities,
     setAutomationPriorities,
-  ] = useState<AutomationPriority[]>([]);
+  ] =
+    useState<AutomationPriority[]>([]);
 
   const [
     executiveRecommendations,
     setExecutiveRecommendations,
-  ] = useState<ExecutiveRecommendation[]>([]);
+  ] =
+    useState<ExecutiveRecommendation[]>(
+      []
+    );
 
   const hasCriticalError =
     validation.length > 0 &&
@@ -204,6 +249,11 @@ export default function Home() {
       (sheet) => sheet.found
     );
 
+  const canAnalyze =
+    isValidWorkbook &&
+    templateValidation?.valid !==
+      false;
+
   async function handleFileChange(
     event: ChangeEvent<HTMLInputElement>
   ) {
@@ -215,6 +265,7 @@ export default function Home() {
     setProcessData(null);
     setSummary(null);
     setFlowModel(null);
+    setTemplateValidation(null);
     setAutomationPriorities([]);
     setExecutiveRecommendations([]);
 
@@ -261,14 +312,19 @@ export default function Home() {
         REQUIRED_SHEETS.map(
           (requiredSheet) => {
             const sheet =
-              getSheet(requiredSheet);
+              getSheet(
+                requiredSheet
+              );
 
             return {
               name: requiredSheet,
-              found: Boolean(sheet),
+              found:
+                Boolean(sheet),
+
               rows: sheet
                 ? Math.max(
-                    sheet.data.length - 1,
+                    sheet.data
+                      .length - 1,
                     0
                   )
                 : 0,
@@ -282,10 +338,13 @@ export default function Home() {
 
       const allRequiredSheetsExist =
         validationResult.every(
-          (sheet) => sheet.found
+          (sheet) =>
+            sheet.found
         );
 
-      if (!allRequiredSheetsExist) {
+      if (
+        !allRequiredSheetsExist
+      ) {
         setProcessData(null);
         return;
       }
@@ -334,8 +393,17 @@ export default function Home() {
             regras.data,
         });
 
+      const structuralValidation =
+        validateProcessTemplate(
+          structuredData
+        );
+
       setProcessData(
         structuredData
+      );
+
+      setTemplateValidation(
+        structuralValidation
       );
     } catch (err) {
       console.error(err);
@@ -345,13 +413,18 @@ export default function Home() {
       );
 
       setProcessData(null);
+      setTemplateValidation(null);
     } finally {
       setIsReading(false);
     }
   }
 
   function handleAnalyzeProcess() {
-    if (!processData) {
+    if (
+      !processData ||
+      templateValidation?.valid ===
+        false
+    ) {
       return;
     }
 
@@ -417,26 +490,30 @@ export default function Home() {
           <div className="grid w-full gap-12 lg:grid-cols-2 lg:items-center">
             <div>
               <p className="mb-4 text-sm font-medium text-cyan-400">
-                De dados de processo para
-                inteligência operacional
+                De dados de processo
+                para inteligência
+                operacional
               </p>
 
               <h1 className="max-w-xl text-4xl font-semibold leading-tight sm:text-5xl">
                 Transforme dados
-                estruturados de processos
-                em análises e informações
-                visuais.
+                estruturados de
+                processos em análises
+                e informações visuais.
               </h1>
 
               <p className="mt-6 max-w-xl text-lg leading-8 text-slate-400">
                 Utilize um template
-                padronizado para transformar
-                informações operacionais em
-                mapas de processo,
-                indicadores de carga de
-                trabalho, análise Lean,
-                identificação de gargalos e
-                oportunidades de automação.
+                padronizado para
+                transformar informações
+                operacionais em mapas
+                de processo,
+                indicadores de carga
+                de trabalho, análise
+                Lean, identificação de
+                gargalos e
+                oportunidades de
+                automação.
               </p>
             </div>
 
@@ -448,9 +525,10 @@ export default function Home() {
                 </h2>
 
                 <p className="mt-2 text-sm leading-6 text-slate-400">
-                  Selecione o template Excel
-                  do Process Intelligence
-                  para iniciar a análise.
+                  Selecione o template
+                  Excel do Process
+                  Intelligence para
+                  iniciar a análise.
                 </p>
               </div>
 
@@ -465,9 +543,9 @@ export default function Home() {
                 </span>
 
                 <span className="mt-2 text-sm text-slate-500">
-                  O arquivo será processado
-                  localmente no seu
-                  navegador.
+                  O arquivo será
+                  processado localmente
+                  no seu navegador.
                 </span>
 
                 <input
@@ -493,11 +571,13 @@ export default function Home() {
                 </div>
               )}
 
-              {validation.length > 0 &&
+              {validation.length >
+                0 &&
                 !isReading && (
                   <div className="mt-5 rounded-xl border border-slate-700 bg-slate-950 p-4">
                     <p className="mb-3 text-sm font-semibold text-slate-200">
-                      Validação do template
+                      Validação do
+                      template
                     </p>
 
                     <div className="space-y-2">
@@ -536,8 +616,9 @@ export default function Home() {
 
                     {isValidWorkbook && (
                       <p className="mt-4 border-t border-slate-800 pt-4 text-sm text-emerald-400">
-                        ✓ Estrutura mínima
-                        do template
+                        ✓ Estrutura
+                        mínima do
+                        template
                         validada.
                       </p>
                     )}
@@ -547,22 +628,21 @@ export default function Home() {
                         ✕ Existem abas
                         obrigatórias
                         ausentes. O
-                        processo não pode
-                        ser analisado.
+                        processo não
+                        pode ser
+                        analisado.
                       </p>
                     )}
                   </div>
                 )}
 
               <button
-                disabled={
-                  !isValidWorkbook
-                }
+                disabled={!canAnalyze}
                 onClick={
                   handleAnalyzeProcess
                 }
                 className={`mt-6 w-full rounded-xl px-5 py-3 font-medium transition ${
-                  isValidWorkbook
+                  canAnalyze
                     ? "bg-cyan-500 text-slate-950 hover:bg-cyan-400"
                     : "cursor-not-allowed bg-slate-700 text-slate-400"
                 }`}
@@ -570,12 +650,35 @@ export default function Home() {
                 Analisar Processo
               </button>
 
+              {templateValidation?.valid ===
+                false && (
+                <p className="mt-3 text-center text-xs leading-5 text-red-300">
+                  Corrija os erros
+                  estruturais do
+                  template antes de
+                  executar a análise.
+                </p>
+              )}
+
               <button className="mt-3 w-full rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-slate-500">
-                Baixar template de exemplo
+                Baixar template de
+                exemplo
               </button>
             </div>
           </div>
         </section>
+
+        {templateValidation && (
+          <section className="pb-8">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
+              <TemplateValidationPanel
+                result={
+                  templateValidation
+                }
+              />
+            </div>
+          </section>
+        )}
 
         {summary && (
           <section className="mb-16 space-y-6">
@@ -656,7 +759,8 @@ export default function Home() {
 
                 <div className="rounded-xl border border-cyan-900 bg-cyan-950/20 p-5">
                   <p className="text-sm text-cyan-300">
-                    Carga mensal estimada
+                    Carga mensal
+                    estimada
                   </p>
 
                   <p className="mt-2 text-2xl font-semibold text-cyan-100">
@@ -672,7 +776,8 @@ export default function Home() {
             {flowModel && (
               <div className="rounded-2xl border border-cyan-900/50 bg-slate-900 p-8">
                 <p className="text-sm font-medium text-cyan-400">
-                  Mapeamento do processo
+                  Mapeamento do
+                  processo
                 </p>
 
                 <h3 className="mt-2 text-2xl font-semibold">
@@ -681,11 +786,13 @@ export default function Home() {
 
                 <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
                   Visualização gerada
-                  automaticamente a partir
-                  das etapas, conexões,
-                  áreas responsáveis,
-                  condições e handoffs
-                  informados no template.
+                  automaticamente a
+                  partir das etapas,
+                  conexões, áreas
+                  responsáveis,
+                  condições e
+                  handoffs informados
+                  no template.
                 </p>
 
                 <div className="mt-8">
@@ -705,13 +812,14 @@ export default function Home() {
                 </p>
 
                 <h3 className="mt-2 text-xl font-semibold">
-                  Distribuição da carga
-                  mensal
+                  Distribuição da
+                  carga mensal
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  A classificação considera
-                  a carga mensal estimada de
+                  A classificação
+                  considera a carga
+                  mensal estimada de
                   cada atividade.
                 </p>
 
@@ -780,15 +888,17 @@ export default function Home() {
                 </p>
 
                 <h3 className="mt-2 text-xl font-semibold">
-                  Atividades com maior
-                  carga mensal
+                  Atividades com
+                  maior carga mensal
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
                   Ranking baseado no
-                  esforço mensal estimado.
-                  Alta carga não significa
-                  automaticamente gargalo.
+                  esforço mensal
+                  estimado. Alta carga
+                  não significa
+                  automaticamente
+                  gargalo.
                 </p>
 
                 <div className="mt-6 space-y-3">
@@ -804,7 +914,9 @@ export default function Home() {
                         <div className="flex items-start justify-between gap-4">
                           <div>
                             <p className="text-xs text-slate-500">
-                              #{index + 1}
+                              #
+                              {index +
+                                1}
                             </p>
 
                             <p className="mt-1 font-medium">
@@ -850,7 +962,8 @@ export default function Home() {
                 </p>
 
                 <h3 className="mt-2 text-xl font-semibold">
-                  Pontos que merecem
+                  Pontos que
+                  merecem
                   investigação
                 </h3>
 
@@ -858,8 +971,8 @@ export default function Home() {
                   A aplicação combina
                   carga, espera,
                   criticidade, SLA,
-                  retrabalho e execução
-                  manual.
+                  retrabalho e
+                  execução manual.
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -875,7 +988,10 @@ export default function Home() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="text-xs text-slate-500">
-                              #{index + 1} ·{" "}
+                              #
+                              {index +
+                                1}{" "}
+                              ·{" "}
                               {
                                 activity.activityId
                               }
@@ -957,11 +1073,13 @@ export default function Home() {
                 </h3>
 
                 <p className="mt-2 text-sm leading-6 text-slate-500">
-                  O potencial considera
-                  repetitividade, regras,
-                  estrutura dos dados,
-                  julgamento humano e tipo
-                  de execução.
+                  O potencial
+                  considera
+                  repetitividade,
+                  regras, estrutura
+                  dos dados,
+                  julgamento humano
+                  e tipo de execução.
                 </p>
 
                 <div className="mt-6 space-y-4">
@@ -977,7 +1095,10 @@ export default function Home() {
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <p className="text-xs text-slate-500">
-                              #{index + 1} ·{" "}
+                              #
+                              {index +
+                                1}{" "}
+                              ·{" "}
                               {
                                 activity.activityId
                               }
@@ -1052,16 +1173,19 @@ export default function Home() {
               </p>
 
               <h3 className="mt-2 text-2xl font-semibold">
-                Prioridade de automação
+                Prioridade de
+                automação
               </h3>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
                 O ranking combina a
-                viabilidade de automação
-                com o impacto operacional.
-                O objetivo é indicar quais
-                oportunidades merecem ser
-                avaliadas primeiro.
+                viabilidade de
+                automação com o
+                impacto operacional.
+                O objetivo é indicar
+                quais oportunidades
+                merecem ser avaliadas
+                primeiro.
               </p>
 
               <div className="mt-8 grid gap-4">
@@ -1078,7 +1202,8 @@ export default function Home() {
                         <div>
                           <p className="text-xs font-medium text-emerald-400">
                             PRIORIDADE #
-                            {index + 1}
+                            {index +
+                              1}
                           </p>
 
                           <h4 className="mt-1 text-lg font-semibold">
@@ -1150,26 +1275,34 @@ export default function Home() {
 
             <div className="rounded-2xl border border-violet-900/60 bg-slate-900 p-8">
               <p className="text-sm font-medium text-violet-400">
-                Recomendação executiva
+                Recomendação
+                executiva
               </p>
 
               <h3 className="mt-2 text-2xl font-semibold">
-                O que avaliar primeiro
+                O que avaliar
+                primeiro
               </h3>
 
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
-                A recomendação transforma
-                os indicadores do processo
-                em uma orientação inicial
-                de ação. Ela não substitui
-                a avaliação técnica ou a
-                decisão do responsável pelo
+                A recomendação
+                transforma os
+                indicadores do
+                processo em uma
+                orientação inicial
+                de ação. Ela não
+                substitui a
+                avaliação técnica
+                ou a decisão do
+                responsável pelo
                 processo.
               </p>
 
               <div className="mt-8 space-y-5">
                 {executiveRecommendations.map(
-                  (recommendation) => (
+                  (
+                    recommendation
+                  ) => (
                     <ExecutiveRecommendationCard
                       key={
                         recommendation.activityId
@@ -1183,36 +1316,46 @@ export default function Home() {
               </div>
 
               <div className="mt-6 rounded-xl border border-violet-900/40 bg-violet-950/10 p-4 text-xs leading-5 text-slate-400">
-                Nenhuma estimativa de
-                economia é apresentada
-                automaticamente. A carga
-                associada indica o esforço
-                atual, mas o percentual
-                efetivamente automatizável
-                deve ser validado por meio
-                de piloto e medição.
+                Nenhuma estimativa
+                de economia é
+                apresentada
+                automaticamente. A
+                carga associada
+                indica o esforço
+                atual, mas o
+                percentual
+                efetivamente
+                automatizável deve
+                ser validado por
+                meio de piloto e
+                medição.
               </div>
             </div>
 
             <p className="text-xs leading-5 text-slate-500">
-              Os resultados apresentados
-              são sinais analíticos gerados
-              a partir dos dados
-              estruturados do template. A
-              confirmação de gargalos e a
-              priorização de automações
-              devem considerar o contexto
-              operacional, regras de
-              negócio, riscos e viabilidade
-              técnica.
+              Os resultados
+              apresentados são
+              sinais analíticos
+              gerados a partir dos
+              dados estruturados do
+              template. A
+              confirmação de
+              gargalos e a
+              priorização de
+              automações devem
+              considerar o contexto
+              operacional, regras
+              de negócio, riscos e
+              viabilidade técnica.
             </p>
           </section>
         )}
 
         <footer className="mt-auto border-t border-slate-800 pt-6 text-sm text-slate-500">
-          Dados estruturados → Mapa do
-          Processo → Análises → Avaliação
-          de Automação
+          Dados estruturados →
+          Validação → Mapa do
+          Processo → Análises →
+          Avaliação de Automação
         </footer>
       </div>
     </main>
@@ -1273,10 +1416,13 @@ function LeanRow({
   return (
     <div>
       <div className="mb-2 flex justify-between text-sm">
-        <span>{label}</span>
+        <span>
+          {label}
+        </span>
 
         <span className="text-slate-400">
-          {percentage}% · {hours} h
+          {percentage}% ·{" "}
+          {hours} h
         </span>
       </div>
 
@@ -1313,7 +1459,10 @@ function SignalList({
 
       <div className="mt-2 flex flex-wrap gap-2">
         {signals.map(
-          (signal, index) => (
+          (
+            signal,
+            index
+          ) => (
             <span
               key={`${signal}-${index}`}
               className="rounded-full border border-slate-700 bg-slate-900 px-3 py-1 text-xs text-slate-300"
@@ -1369,7 +1518,9 @@ function ExecutiveRecommendationCard({
 
           <p className="mt-2 text-sm text-slate-500">
             Prioridade{" "}
-            {recommendation.priorityScore}
+            {
+              recommendation.priorityScore
+            }
             /100
           </p>
         </div>
@@ -1420,11 +1571,12 @@ function ExecutiveRecommendationCard({
         }
       />
 
-      {recommendation.safeguards.length >
-        0 && (
+      {recommendation.safeguards
+        .length > 0 && (
         <div className="mt-5">
           <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Cuidados antes da implementação
+            Cuidados antes da
+            implementação
           </p>
 
           <ul className="mt-3 space-y-2">
