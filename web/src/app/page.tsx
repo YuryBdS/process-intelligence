@@ -251,8 +251,7 @@ export default function Home() {
 
   const canAnalyze =
     isValidWorkbook &&
-    templateValidation?.valid !==
-      false;
+    templateValidation?.valid !== false;
 
   async function handleFileChange(
     event: ChangeEvent<HTMLInputElement>
@@ -323,8 +322,7 @@ export default function Home() {
 
               rows: sheet
                 ? Math.max(
-                    sheet.data
-                      .length - 1,
+                    sheet.data.length - 1,
                     0
                   )
                 : 0,
@@ -422,8 +420,7 @@ export default function Home() {
   function handleAnalyzeProcess() {
     if (
       !processData ||
-      templateValidation?.valid ===
-        false
+      templateValidation?.valid === false
     ) {
       return;
     }
@@ -660,10 +657,13 @@ export default function Home() {
                 </p>
               )}
 
-              <button className="mt-3 w-full rounded-xl border border-slate-700 px-5 py-3 text-sm font-medium text-slate-300 transition hover:border-slate-500">
-                Baixar template de
-                exemplo
-              </button>
+              <a
+                href="/Process_Intelligence_Template_V2.xlsx"
+                download="Process_Intelligence_Template_V2.xlsx"
+                className="mt-3 block w-full rounded-xl border border-slate-700 px-5 py-3 text-center text-sm font-medium text-slate-300 transition hover:border-slate-500"
+              >
+                Baixar template de exemplo
+              </a>
             </div>
           </div>
         </section>
@@ -915,8 +915,7 @@ export default function Home() {
                           <div>
                             <p className="text-xs text-slate-500">
                               #
-                              {index +
-                                1}
+                              {index + 1}
                             </p>
 
                             <p className="mt-1 font-medium">
@@ -989,8 +988,7 @@ export default function Home() {
                           <div>
                             <p className="text-xs text-slate-500">
                               #
-                              {index +
-                                1}{" "}
+                              {index + 1}{" "}
                               ·{" "}
                               {
                                 activity.activityId
@@ -1096,8 +1094,7 @@ export default function Home() {
                           <div>
                             <p className="text-xs text-slate-500">
                               #
-                              {index +
-                                1}{" "}
+                              {index + 1}{" "}
                               ·{" "}
                               {
                                 activity.activityId
@@ -1202,8 +1199,7 @@ export default function Home() {
                         <div>
                           <p className="text-xs font-medium text-emerald-400">
                             PRIORIDADE #
-                            {index +
-                              1}
+                            {index + 1}
                           </p>
 
                           <h4 className="mt-1 text-lg font-semibold">
