@@ -1,20 +1,51 @@
 # Process Intelligence
 
-Process Intelligence is a portfolio project that transforms structured operational process data into process visualization, operational analytics and automation recommendations.
+**From structured process data to operational intelligence and automation decisions.**
 
-The project explores a practical question:
+Process Intelligence is a portfolio project that transforms structured operational data into process visualization, workload analytics, Lean insights, bottleneck signals, automation prioritization and executive recommendations.
 
-> What if process mapping could become structured data that can be validated, analyzed and used to support process improvement and automation decisions?
+### [Live Demo](https://process-intelligence-seven.vercel.app)
 
-Instead of treating a process map only as documentation, Process Intelligence connects process design with operational data, workload indicators, Lean analysis, business rules and automation assessment.
+### [GitHub Repository](https://github.com/YuryBdS/process-intelligence)
 
 ---
 
-## Current Status
+## Why I Built This
 
-**V1 MVP completed**
+Process mapping is frequently treated as documentation.
 
-The current version supports the complete flow:
+A process is mapped, presented and eventually becomes a static diagram.
+
+But operational processes also contain valuable data:
+
+- execution time
+- waiting time
+- workload
+- volume
+- SLA
+- business rules
+- exceptions
+- rework
+- decision points
+- systems
+- responsible areas
+- automation characteristics
+
+Process Intelligence explores a different approach:
+
+> What if process mapping became structured data that could support operational analysis and automation decisions?
+
+The result is an application that connects:
+
+**Process Management + Data + Operational Analytics + Automation**
+
+---
+
+## What the Application Does
+
+The user starts with a structured Excel template.
+
+The application then transforms this information through the following flow:
 
 ```text
 Excel Template
@@ -41,26 +72,73 @@ Automation Prioritization
 Executive Recommendation
 ```
 
----
+The objective is not only to draw a process map.
 
-## The Problem
-
-Operational processes are often documented across spreadsheets, presentations, interviews and diagrams.
-
-These formats are useful for describing how a process works, but they frequently make it difficult to consistently answer questions such as:
-
-- Where is operational effort concentrated?
-- Which activities generate waiting or rework?
-- Which parts of the process deserve further investigation?
-- Which activities have characteristics suitable for automation?
-- Which automation opportunities should be evaluated first?
-- Are process stages and connections structurally consistent?
-
-Process Intelligence addresses this by turning process documentation into structured process data.
+The objective is to transform process information into **explainable analytical signals that can support better decisions**.
 
 ---
 
-## Structured Process Template
+## Live Demo
+
+The V1 is publicly available at:
+
+### https://process-intelligence-seven.vercel.app
+
+You can:
+
+1. Download the example Excel template.
+2. Upload the template to the application.
+3. Validate the process structure.
+4. Generate the process map.
+5. Analyze workload and Lean distribution.
+6. Identify bottleneck signals.
+7. Evaluate automation opportunities.
+8. Review automation priorities.
+9. Generate initial executive recommendations.
+
+All sample data is synthetic and intended only for demonstration purposes.
+
+---
+
+## Product Preview
+
+The current interface includes:
+
+- Excel template upload
+- Structural validation
+- Process overview
+- BPMN-inspired process visualization
+- Swimlanes
+- Workload indicators
+- Lean analysis
+- Bottleneck signals
+- Automation assessment
+- Automation priority ranking
+- Executive recommendations
+
+> A product screenshot can be added here as the visual cover of the project.
+
+---
+
+## V1 Status
+
+**V1 MVP completed and deployed.**
+
+The current version has been validated locally and in production.
+
+```text
+Production build        OK
+TypeScript validation   OK
+ESLint                   0 errors / 0 warnings
+Production dependencies 0 known vulnerabilities
+Production deployment   OK
+```
+
+---
+
+# Core Capabilities
+
+## 1. Structured Process Template
 
 The application uses a standardized Excel workbook as its process data source.
 
@@ -72,17 +150,17 @@ The main sheets are:
 - `CONEXOES`
 - `REGRAS`
 
-Additional guidance sheets help users understand how the template should be completed.
+Additional guidance sheets help users understand how the process should be documented.
 
-A downloadable example template is available directly from the application.
+The application also provides a downloadable example template.
 
 ---
 
-## Structural Validation
+## 2. Structural Validation
 
 Before the process can be analyzed, Process Intelligence validates its structure.
 
-Current checks include:
+Current validation includes:
 
 - Required sheets
 - Required fields
@@ -97,9 +175,15 @@ Current checks include:
 
 Critical structural errors prevent the analysis from running.
 
+This creates an important principle for the project:
+
+```text
+Validate the process model before analyzing the process.
+```
+
 ---
 
-## Process Visualization
+## 3. Process Visualization
 
 The application automatically generates a process map from the structured Excel data.
 
@@ -113,17 +197,20 @@ The visualization currently supports:
 - Sequence flows
 - Conditions
 - Branch probabilities
-- Rework and return flows
+- Rework flows
+- Return flows
 - Zoom controls
 - Fit-to-screen visualization
 
 The map uses conventions inspired by BPMN.
 
-It is intentionally described as a **simplified BPMN representation** and is not yet a formal BPMN 2.0 model or interoperable BPMN file.
+It is intentionally described as a **simplified BPMN representation**.
+
+The current version is not yet a formal BPMN 2.0 model or an interoperable BPMN file.
 
 ---
 
-## Operational Workload Analysis
+## 4. Operational Workload Analysis
 
 Process Intelligence estimates monthly operational workload at activity level.
 
@@ -140,17 +227,17 @@ x Occurrence Rate
 
 The result represents estimated monthly human effort in hours.
 
-Waiting time is analyzed separately and is not automatically considered human workload.
+One important design decision is that waiting time is analyzed separately.
 
 ```text
 Waiting Time != Human Effort
 ```
 
-This distinction prevents process lead time from being incorrectly interpreted as human effort.
+Waiting can increase process lead time without requiring equivalent human effort.
 
 ---
 
-## Lean Analysis
+## 5. Lean Analysis
 
 Activities can be classified as:
 
@@ -161,11 +248,11 @@ Activities can be classified as:
 
 Instead of simply counting activities, the Lean distribution uses estimated monthly workload.
 
-This helps show where operational effort is actually concentrated.
+This provides a more useful view of where operational effort is actually concentrated.
 
 ---
 
-## Bottleneck Signals
+## 6. Bottleneck Signals
 
 The application identifies activities that may deserve additional investigation.
 
@@ -179,15 +266,19 @@ The assessment combines signals such as:
 - Waste
 - Manual execution
 
-These results are intentionally presented as **bottleneck signals**, not definitive bottlenecks.
+The results are intentionally presented as **bottleneck signals**, not definitive bottlenecks.
 
 A high-workload activity may simply be a high-volume core activity.
+
+```text
+High Workload != Confirmed Bottleneck
+```
 
 Operational context is still required before making a final decision.
 
 ---
 
-## Automation Assessment
+## 7. Automation Assessment
 
 Each activity is evaluated using characteristics such as:
 
@@ -197,15 +288,19 @@ Each activity is evaluated using characteristics such as:
 - Human judgment requirements
 - Execution type
 
-The result indicates whether an activity has low, medium or high automation suitability.
+The result indicates whether an activity has:
+
+- Low automation suitability
+- Medium automation suitability
+- High automation suitability
 
 Automation suitability alone does not define implementation priority.
 
 ---
 
-## Automation Prioritization
+## 8. Automation Prioritization
 
-Process Intelligence separates automation suitability from operational impact.
+Process Intelligence separates two dimensions:
 
 ```text
 Automation Suitability
@@ -215,13 +310,17 @@ Operational Impact
 Automation Priority
 ```
 
-The prioritization model combines both dimensions before ranking opportunities.
+This distinction is important.
 
-This prevents an activity from becoming a top priority only because it is technically easy to automate.
+An activity can be technically easy to automate but have limited business impact.
+
+Likewise, an operationally important activity may require significant redesign before automation.
+
+The ranking therefore combines both perspectives.
 
 ---
 
-## Executive Recommendations
+## 9. Executive Recommendations
 
 The application converts analytical results into initial recommendations.
 
@@ -233,34 +332,48 @@ Possible approaches include:
 - Assisted automation
 - Process redesign before automation
 
-The recommendation engine is deterministic and rule-based in the current V1.
+The recommendation engine is deterministic and rule-based in V1.
 
-It does not automatically claim financial savings or guaranteed automation benefits.
+Recommendations remain explainable because they are connected to explicit process data and scoring rules.
 
-Actual benefits should be validated through process-owner review, technical assessment and pilot measurement.
+The system does not automatically claim financial savings or guaranteed automation benefits.
+
+Actual benefits should be validated through:
+
+- process-owner review
+- technical assessment
+- pilot implementation
+- before/after measurement
 
 ---
 
-## Example Process
+# Example Process
 
 The provided workbook represents a synthetic operational request process containing:
 
-- 12 process stages
-- 18 operational activities
-- 13 process connections
-- 5 business rules
-- Multiple responsible areas
+```text
+12 process stages
+18 operational activities
+13 process connections
+5 business rules
+3 responsible areas
+```
+
+The example also includes:
+
 - Decision points
 - Rework flows
 - Waiting time
 - Operational workload
+- SLA information
+- Lean classification
 - Automation characteristics
 
-All example data is synthetic and intended only for demonstration and portfolio purposes.
+All information is synthetic and intended exclusively for demonstration and portfolio purposes.
 
 ---
 
-## Solution Architecture
+# Solution Architecture
 
 ```text
 Excel Workbook
@@ -292,28 +405,55 @@ Executive Recommendation Engine
 Next.js User Interface
 ```
 
-The current version processes the uploaded workbook directly in the browser.
+The Excel workbook is processed directly in the browser.
 
-No backend is required for V1.
+The current V1 does not require:
+
+- Backend
+- Database
+- External AI API
+- Server-side file storage
+
+This keeps the architecture simple and makes the application suitable for lightweight deployment.
 
 ---
 
-## Technology Stack
+# Technology Stack
+
+## Frontend
 
 - Next.js
 - React
 - TypeScript
 - Tailwind CSS
+
+## Data Processing
+
 - read-excel-file
-- SVG-based process visualization
+- Structured process data model
+- Deterministic scoring rules
+
+## Visualization
+
+- React
+- SVG
+- Custom process-map rendering
+
+## Engineering
+
 - Git
 - GitHub
+- ESLint
+- TypeScript validation
+- Production build validation
 
-The process map is generated without requiring an external BPMN visualization library.
+## Deployment
+
+- Vercel
 
 ---
 
-## Repository Structure
+# Repository Structure
 
 ```text
 process-intelligence/
@@ -326,11 +466,24 @@ process-intelligence/
 |   +-- Process_Intelligence_Template_V2.xlsx
 |
 +-- web/
+|   |
 |   +-- public/
+|   |   +-- Process_Intelligence_Template_V2.xlsx
+|   |
 |   +-- src/
+|   |   |
 |   |   +-- app/
+|   |   |
 |   |   +-- components/
+|   |   |   +-- process-map.tsx
+|   |   |   +-- template-validation-panel.tsx
+|   |   |
 |   |   +-- lib/
+|   |       +-- process-data.ts
+|   |       +-- process-flow.ts
+|   |       +-- template-validation.ts
+|   |       +-- automation-priority.ts
+|   |       +-- executive-recommendation.ts
 |   |
 |   +-- package.json
 |
@@ -340,7 +493,75 @@ process-intelligence/
 
 ---
 
-## Running Locally
+# Design Principles
+
+## Structured Data Before Automation
+
+Automation decisions should start with a clear representation of:
+
+- activities
+- inputs
+- outputs
+- rules
+- exceptions
+- responsibilities
+- systems
+
+---
+
+## Rules Before Unnecessary AI
+
+If deterministic rules can reliably solve the problem, they should be considered before introducing generative AI.
+
+The current V1 therefore focuses on **explainable rule-based intelligence**.
+
+---
+
+## Workload Is Not the Same as Bottleneck
+
+A high-volume core activity may naturally have high workload.
+
+High workload should trigger investigation, not an automatic conclusion.
+
+---
+
+## Waiting Is Not Human Effort
+
+Waiting affects process lead time.
+
+It should not automatically be counted as operational human effort.
+
+---
+
+## Do Not Automate Waste Blindly
+
+An inefficient process should not automatically become an automated inefficient process.
+
+When an activity exists because of:
+
+- rework
+- unnecessary handoffs
+- poor process design
+- redundant controls
+
+process redesign may be more appropriate than automation.
+
+---
+
+## Recommendations Should Be Explainable
+
+Every recommendation should be traceable to structured process information and explicit rules.
+
+This makes the logic easier to:
+
+- understand
+- challenge
+- improve
+- audit
+
+---
+
+# Running Locally
 
 Clone the repository:
 
@@ -348,7 +569,7 @@ Clone the repository:
 git clone https://github.com/YuryBdS/process-intelligence.git
 ```
 
-Enter the application directory:
+Enter the web application:
 
 ```bash
 cd process-intelligence/web
@@ -372,29 +593,18 @@ Open:
 http://localhost:3000
 ```
 
-On Windows environments where PowerShell blocks `npm.ps1`, the equivalent commands can be executed with:
+For Windows environments where PowerShell blocks `npm.ps1`, use:
 
 ```bash
 npm.cmd install
 npm.cmd run dev
 ```
 
-> The commands above are installation instructions for someone cloning the project. They do not need to be executed when editing this README.
-
 ---
 
-## Technical Validation
+# Technical Validation
 
-V1 has been validated with:
-
-```text
-Production build        OK
-TypeScript validation   OK
-ESLint                   0 errors / 0 warnings
-Production dependencies 0 known vulnerabilities
-```
-
-Validation commands:
+The V1 was validated using:
 
 ```bash
 npm run lint
@@ -402,39 +612,19 @@ npm run build
 npm audit --omit=dev
 ```
 
-The dependency security statement above refers specifically to production dependencies at the time of V1 validation.
+Validation result:
+
+```text
+Next.js production build       PASS
+TypeScript validation          PASS
+ESLint                         PASS
+Production vulnerabilities     0
+Vercel production deployment   PASS
+```
 
 ---
 
-## Design Principles
-
-### Structured data before automation
-
-Automation decisions should start with a clear representation of the process, activities, rules, inputs, outputs and exceptions.
-
-### Rules before unnecessary AI
-
-When deterministic rules can reliably solve the problem, they should be preferred before introducing generative AI.
-
-### Workload is not the same as bottleneck
-
-High workload is an analytical signal, not automatic evidence of a bottleneck.
-
-### Waiting is not human effort
-
-Waiting time affects process lead time but should not automatically be counted as operational workload.
-
-### Do not automate waste blindly
-
-When an activity exists because of rework or process inefficiency, redesign may be more appropriate than automation.
-
-### Recommendations should be explainable
-
-Every recommendation should be traceable to structured process data and explicit decision rules.
-
----
-
-## V1 Scope
+# V1 Scope
 
 The current version includes:
 
@@ -451,10 +641,11 @@ The current version includes:
 - Automation prioritization
 - Executive recommendations
 - Local browser-based processing
+- Public deployment
 
 ---
 
-## Future Evolution
+# Future Evolution
 
 Possible future versions may include:
 
@@ -464,7 +655,8 @@ Possible future versions may include:
 - Capacity simulation
 - Scenario comparison
 - Automated reporting
-- PDF or presentation export
+- PDF export
+- Presentation export
 - Process benchmarking
 - Historical process analysis
 - Integration with operational systems
@@ -475,20 +667,46 @@ These capabilities are intentionally outside the V1 scope.
 
 ---
 
-## Project Purpose
+# What This Project Demonstrates
 
-Process Intelligence was created as a portfolio project focused on the intersection of:
+This project was created to demonstrate more than application development.
 
-**Process Management + Data + Operational Analytics + Automation**
+It combines:
 
-The objective is not only to draw process maps.
+```text
+Business Process Understanding
+          +
+Structured Data Modeling
+          +
+Operational Analysis
+          +
+Decision Rules
+          +
+Automation Thinking
+          +
+Software Development
+```
 
-The project demonstrates how structured process information can be transformed into explainable analytical signals and better automation decisions.
+The central idea is:
+
+> Process information becomes significantly more valuable when it can be structured, analyzed and transformed into explainable decisions.
 
 ---
 
-## Author
+# Project Links
+
+### Live Application
+
+https://process-intelligence-seven.vercel.app
+
+### Source Code
+
+https://github.com/YuryBdS/process-intelligence
+
+---
+
+# Author
 
 **Yury Batista**
 
-Business processes, operational analysis, data and automation.
+Business Processes · Operational Analysis · Data · Automation
