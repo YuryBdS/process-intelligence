@@ -83,32 +83,6 @@ function getNodeDimensions(
   };
 }
 
-function getNodeLabel(
-  kind: FlowNodeKind
-): string {
-  if (kind === "start") {
-    return "Evento de início";
-  }
-
-  if (kind === "end") {
-    return "Evento de fim";
-  }
-
-  if (kind === "gateway") {
-    return "Gateway";
-  }
-
-  if (kind === "subprocess") {
-    return "Subprocesso";
-  }
-
-  if (kind === "event") {
-    return "Evento";
-  }
-
-  return "Tarefa";
-}
-
 function getAreaName(
   node: ProcessFlowNode
 ): string {
@@ -1016,7 +990,7 @@ function BpmnNode({
             height,
         }}
       >
-        <div className="absolute inset-[4px] rounded-lg border border-violet-800/60 pointer-events-none" />
+        <div className="pointer-events-none absolute inset-[4px] rounded-lg border border-violet-800/60" />
 
         <TaskContent
           node={node}
