@@ -3,6 +3,8 @@
 import { ChangeEvent, useState } from "react";
 import readExcelFile from "read-excel-file/browser";
 
+import ProcessMap from "@/components/process-map";
+
 import {
   buildProcessWorkbookData,
   calculateProcessSummary,
@@ -25,6 +27,11 @@ import {
   type ExecutiveRecommendation,
   type RecommendationDecision,
 } from "@/lib/executive-recommendation";
+
+import {
+  buildProcessFlowModel,
+  type ProcessFlowModel,
+} from "@/lib/process-flow";
 
 const REQUIRED_SHEETS = [
   "PROCESSO",
@@ -157,20 +164,23 @@ function getDecisionBadgeClass(
 
 export default function Home() {
   const [fileName, setFileName] = useState("");
+
   const [validation, setValidation] =
     useState<SheetValidation[]>([]);
 
   const [error, setError] = useState("");
+
   const [isReading, setIsReading] =
     useState(false);
 
   const [processData, setProcessData] =
-    useState<ProcessWorkbookData | null>(
-      null
-    );
+    useState<ProcessWorkbookData | null>(null);
 
   const [summary, setSummary] =
     useState<ProcessSummary | null>(null);
+
+  const [flowModel, setFlowModel] =
+    useState<ProcessFlowModel | null>(null);
 
   const [
     automationPriorities,
@@ -204,6 +214,7 @@ export default function Home() {
     setValidation([]);
     setProcessData(null);
     setSummary(null);
+    setFlowModel(null);
     setAutomationPriorities([]);
     setExecutiveRecommendations([]);
 
@@ -274,9 +285,7 @@ export default function Home() {
           (sheet) => sheet.found
         );
 
-      if (
-        !allRequiredSheetsExist
-      ) {
+      if (!allRequiredSheetsExist) {
         setProcessData(null);
         return;
       }
@@ -351,6 +360,11 @@ export default function Home() {
         processData
       );
 
+    const processFlow =
+      buildProcessFlowModel(
+        processData
+      );
+
     const priorities =
       calculateAutomationPriorities(
         processData
@@ -364,6 +378,10 @@ export default function Home() {
 
     setSummary(
       processSummary
+    );
+
+    setFlowModel(
+      processFlow
     );
 
     setAutomationPriorities(
@@ -650,6 +668,35 @@ export default function Home() {
                 </div>
               </div>
             </div>
+
+            {flowModel && (
+              <div className="rounded-2xl border border-cyan-900/50 bg-slate-900 p-8">
+                <p className="text-sm font-medium text-cyan-400">
+                  Mapeamento do processo
+                </p>
+
+                <h3 className="mt-2 text-2xl font-semibold">
+                  Mapa do processo
+                </h3>
+
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-400">
+                  Visualização gerada
+                  automaticamente a partir
+                  das etapas, conexões,
+                  áreas responsáveis,
+                  condições e handoffs
+                  informados no template.
+                </p>
+
+                <div className="mt-8">
+                  <ProcessMap
+                    model={
+                      flowModel
+                    }
+                  />
+                </div>
+              </div>
+            )}
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-2xl border border-slate-800 bg-slate-900 p-8">
@@ -1163,9 +1210,9 @@ export default function Home() {
         )}
 
         <footer className="mt-auto border-t border-slate-800 pt-6 text-sm text-slate-500">
-          Dados estruturados → BPMN →
-          Análises → Avaliação de
-          Automação
+          Dados estruturados → Mapa do
+          Processo → Análises → Avaliação
+          de Automação
         </footer>
       </div>
     </main>
