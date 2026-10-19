@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  useRef,
+  useState,
+} from "react";
+
 import type {
   FlowNodeKind,
   ProcessFlowEdge,
@@ -26,6 +31,22 @@ const LANE_HEIGHT = 180;
 const LEFT_PADDING = 190;
 const TOP_PADDING = 55;
 const BOTTOM_PADDING = 55;
+
+const MIN_ZOOM = 0.25;
+const MAX_ZOOM = 1.6;
+const ZOOM_STEP = 0.1;
+
+function clampZoom(
+  value: number
+): number {
+  return Math.min(
+    MAX_ZOOM,
+    Math.max(
+      MIN_ZOOM,
+      value
+    )
+  );
+}
 
 function getNodeLabel(
   kind: FlowNodeKind
@@ -136,10 +157,7 @@ function getOrderedAreas(
   nodes: ProcessFlowNode[]
 ): string[] {
   const areaOrder =
-    new Map<
-      string,
-      number
-    >();
+    new Map<string, number>();
 
   nodes.forEach(
     (node, index) => {
@@ -238,10 +256,6 @@ function buildConnectionPath(
     target.y +
     NODE_HEIGHT / 2;
 
-  /*
-   * Fluxo para frente:
-   * curva horizontal simples.
-   */
   if (targetX >= sourceX) {
     const middleX =
       sourceX +
@@ -259,10 +273,6 @@ function buildConnectionPath(
     ].join(" ");
   }
 
-  /*
-   * Fluxo de retorno:
-   * cria uma curva externa.
-   */
   const returnX =
     Math.max(
       sourceX,
@@ -335,6 +345,14 @@ function getEdgeLabel(
 export default function ProcessMap({
   model,
 }: ProcessMapProps) {
+  const scrollContainerRef =
+    useRef<HTMLDivElement | null>(
+      null
+    );
+
+  const [zoom, setZoom] =
+    useState(1);
+
   if (
     model.nodes.length === 0
   ) {
@@ -405,37 +423,153 @@ export default function ProcessMap({
         edge.isValid
     );
 
+  function handleZoomIn() {
+    setZoom(
+      (current) =>
+        clampZoom(
+          current +
+            ZOOM_STEP
+        )
+    );
+  }
+
+  function handleZoomOut() {
+    setZoom(
+      (current) =>
+        clampZoom(
+          current -
+            ZOOM_STEP
+        )
+    );
+  }
+
+  function handleResetZoom() {
+    setZoom(1);
+
+    const container =
+      scrollContainerRef.current;
+
+    if (container) {
+      container.scrollTo({
+        left: 0,
+        top: 0,
+        behavior: "smooth",
+      });
+    }
+  }
+
+  function handleFitToWidth() {
+    const container =
+      scrollContainerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    const availableWidth =
+      Math.max(
+        container.clientWidth -
+          32,
+        200
+      );
+
+    const fitZoom =
+      availableWidth /
+      mapWidth;
+
+    setZoom(
+      clampZoom(
+        fitZoom
+      )
+    );
+
+    container.scrollTo({
+      left: 0,
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap gap-3">
-        <SummaryBadge
-          label="Etapas"
-          value={
-            model.nodes.length
-          }
-        />
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap gap-3">
+          <SummaryBadge
+            label="Etapas"
+            value={
+              model.nodes.length
+            }
+          />
 
-        <SummaryBadge
-          label="Conexões"
-          value={
-            validEdges.length
-          }
-        />
+          <SummaryBadge
+            label="Conexões"
+            value={
+              validEdges.length
+            }
+          />
 
-        <SummaryBadge
-          label="Ramificações"
-          value={
-            model.branchingNodes
-              .length
-          }
-        />
+          <SummaryBadge
+            label="Ramificações"
+            value={
+              model.branchingNodes
+                .length
+            }
+          />
 
-        <SummaryBadge
-          label="Áreas"
-          value={
-            areas.length
-          }
-        />
+          <SummaryBadge
+            label="Áreas"
+            value={
+              areas.length
+            }
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <MapControlButton
+            label="−"
+            title="Diminuir zoom"
+            onClick={
+              handleZoomOut
+            }
+            disabled={
+              zoom <= MIN_ZOOM
+            }
+          />
+
+          <div className="min-w-16 rounded-lg border border-slate-800 bg-slate-950 px-3 py-2 text-center text-xs font-medium text-slate-300">
+            {Math.round(
+              zoom * 100
+            )}
+            %
+          </div>
+
+          <MapControlButton
+            label="+"
+            title="Aumentar zoom"
+            onClick={
+              handleZoomIn
+            }
+            disabled={
+              zoom >= MAX_ZOOM
+            }
+          />
+
+          <MapControlButton
+            label="Ajustar à tela"
+            title="Ajustar mapa à largura disponível"
+            onClick={
+              handleFitToWidth
+            }
+          />
+
+          <MapControlButton
+            label="Resetar"
+            title="Voltar ao zoom original"
+            onClick={
+              handleResetZoom
+            }
+          />
+        </div>
       </div>
 
       {model.warnings.length >
@@ -467,254 +601,280 @@ export default function ProcessMap({
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-950">
+      <div
+        ref={
+          scrollContainerRef
+        }
+        className="overflow-auto rounded-2xl border border-slate-800 bg-slate-950"
+      >
         <div
-          className="relative"
+          className="relative overflow-hidden"
           style={{
             width:
-              mapWidth,
+              mapWidth *
+              zoom,
+
             height:
-              mapHeight,
+              mapHeight *
+              zoom,
           }}
         >
-          {areas.map(
-            (
-              area,
-              laneIndex
-            ) => {
-              const top =
-                TOP_PADDING +
-                laneIndex *
-                  LANE_HEIGHT;
+          <div
+            className="absolute left-0 top-0 origin-top-left"
+            style={{
+              width:
+                mapWidth,
 
-              return (
-                <div
-                  key={area}
-                  className="absolute left-0 border-y border-slate-800/70 bg-slate-950/40"
-                  style={{
-                    top,
-                    width:
-                      mapWidth,
-                    height:
-                      LANE_HEIGHT,
-                  }}
-                >
-                  <div
-                    className="absolute left-0 top-0 flex h-full items-center border-r border-slate-800 bg-slate-900/80 px-5"
-                    style={{
-                      width:
-                        LEFT_PADDING -
-                        20,
-                    }}
-                  >
-                    <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                        Área
-                      </p>
+              height:
+                mapHeight,
 
-                      <p className="mt-1 max-w-32 text-sm font-semibold text-slate-300">
-                        {area}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            }
-          )}
-
-          <svg
-            className="absolute inset-0 z-10"
-            width={mapWidth}
-            height={mapHeight}
+              transform:
+                `scale(${zoom})`,
+            }}
           >
-            <defs>
-              <marker
-                id="process-arrow"
-                markerWidth="9"
-                markerHeight="9"
-                refX="8"
-                refY="4.5"
-                orient="auto"
-              >
-                <path
-                  d="M 0 0 L 9 4.5 L 0 9 z"
-                  className="fill-slate-500"
-                />
-              </marker>
-            </defs>
-
-            {validEdges.map(
-              (edge) => {
-                const source =
-                  positionedNodeMap.get(
-                    edge.sourceId
-                  );
-
-                const target =
-                  positionedNodeMap.get(
-                    edge.targetId
-                  );
-
-                if (
-                  !source ||
-                  !target
-                ) {
-                  return null;
-                }
-
-                const sourceCenterX =
-                  source.x +
-                  NODE_WIDTH;
-
-                const sourceCenterY =
-                  source.y +
-                  NODE_HEIGHT /
-                    2;
-
-                const targetCenterX =
-                  target.x;
-
-                const targetCenterY =
-                  target.y +
-                  NODE_HEIGHT /
-                    2;
-
-                const labelX =
-                  (
-                    sourceCenterX +
-                    targetCenterX
-                  ) /
-                  2;
-
-                const labelY =
-                  (
-                    sourceCenterY +
-                    targetCenterY
-                  ) /
-                    2 -
-                  9;
+            {areas.map(
+              (
+                area,
+                laneIndex
+              ) => {
+                const top =
+                  TOP_PADDING +
+                  laneIndex *
+                    LANE_HEIGHT;
 
                 return (
-                  <g
-                    key={
-                      edge.id
-                    }
+                  <div
+                    key={area}
+                    className="absolute left-0 border-y border-slate-800/70 bg-slate-950/40"
+                    style={{
+                      top,
+                      width:
+                        mapWidth,
+                      height:
+                        LANE_HEIGHT,
+                    }}
                   >
-                    <path
-                      d={buildConnectionPath(
-                        source,
-                        target
-                      )}
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      markerEnd="url(#process-arrow)"
-                      className="text-slate-600"
-                    />
+                    <div
+                      className="absolute left-0 top-0 flex h-full items-center border-r border-slate-800 bg-slate-900/80 px-5"
+                      style={{
+                        width:
+                          LEFT_PADDING -
+                          20,
+                      }}
+                    >
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                          Área
+                        </p>
 
-                    {shouldShowEdgeLabel(
-                      edge
-                    ) && (
-                      <>
-                        <rect
-                          x={
-                            labelX -
-                            70
-                          }
-                          y={
-                            labelY -
-                            12
-                          }
-                          width="140"
-                          height="24"
-                          rx="7"
-                          className="fill-slate-900 stroke-slate-700"
-                        />
-
-                        <text
-                          x={
-                            labelX
-                          }
-                          y={
-                            labelY +
-                            4
-                          }
-                          textAnchor="middle"
-                          className="fill-slate-300 text-[10px]"
-                        >
-                          {getEdgeLabel(
-                            edge
-                          )}
-                        </text>
-                      </>
-                    )}
-                  </g>
+                        <p className="mt-1 max-w-32 text-sm font-semibold text-slate-300">
+                          {area}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 );
               }
             )}
-          </svg>
 
-          {positionedNodes.map(
-            ({ node, x, y }) => (
-              <div
-                key={
-                  node.id
-                }
-                className={`absolute z-20 rounded-xl border p-4 shadow-xl ${getNodeClass(
-                  node.kind
-                )}`}
-                style={{
-                  left: x,
-                  top: y,
-                  width:
-                    NODE_WIDTH,
-                  minHeight:
-                    NODE_HEIGHT,
-                }}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p
-                      className={`text-[10px] font-semibold uppercase tracking-wide ${getNodeLabelClass(
-                        node.kind
-                      )}`}
+            <svg
+              className="absolute inset-0 z-10"
+              width={mapWidth}
+              height={mapHeight}
+            >
+              <defs>
+                <marker
+                  id="process-arrow"
+                  markerWidth="9"
+                  markerHeight="9"
+                  refX="8"
+                  refY="4.5"
+                  orient="auto"
+                >
+                  <path
+                    d="M 0 0 L 9 4.5 L 0 9 z"
+                    className="fill-slate-500"
+                  />
+                </marker>
+              </defs>
+
+              {validEdges.map(
+                (edge) => {
+                  const source =
+                    positionedNodeMap.get(
+                      edge.sourceId
+                    );
+
+                  const target =
+                    positionedNodeMap.get(
+                      edge.targetId
+                    );
+
+                  if (
+                    !source ||
+                    !target
+                  ) {
+                    return null;
+                  }
+
+                  const sourceCenterX =
+                    source.x +
+                    NODE_WIDTH;
+
+                  const sourceCenterY =
+                    source.y +
+                    NODE_HEIGHT /
+                      2;
+
+                  const targetCenterX =
+                    target.x;
+
+                  const targetCenterY =
+                    target.y +
+                    NODE_HEIGHT /
+                      2;
+
+                  const labelX =
+                    (
+                      sourceCenterX +
+                      targetCenterX
+                    ) /
+                    2;
+
+                  const labelY =
+                    (
+                      sourceCenterY +
+                      targetCenterY
+                    ) /
+                      2 -
+                    9;
+
+                  return (
+                    <g
+                      key={
+                        edge.id
+                      }
                     >
-                      {getNodeLabel(
-                        node.kind
-                      )}
-                    </p>
+                      <path
+                        d={buildConnectionPath(
+                          source,
+                          target
+                        )}
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        markerEnd="url(#process-arrow)"
+                        className="text-slate-600"
+                      />
 
-                    <p className="mt-1 text-xs text-slate-500">
-                      {node.id}
-                    </p>
+                      {shouldShowEdgeLabel(
+                        edge
+                      ) && (
+                        <>
+                          <rect
+                            x={
+                              labelX -
+                              70
+                            }
+                            y={
+                              labelY -
+                              12
+                            }
+                            width="140"
+                            height="24"
+                            rx="7"
+                            className="fill-slate-900 stroke-slate-700"
+                          />
+
+                          <text
+                            x={
+                              labelX
+                            }
+                            y={
+                              labelY +
+                              4
+                            }
+                            textAnchor="middle"
+                            className="fill-slate-300 text-[10px]"
+                          >
+                            {getEdgeLabel(
+                              edge
+                            )}
+                          </text>
+                        </>
+                      )}
+                    </g>
+                  );
+                }
+              )}
+            </svg>
+
+            {positionedNodes.map(
+              ({
+                node,
+                x,
+                y,
+              }) => (
+                <div
+                  key={
+                    node.id
+                  }
+                  className={`absolute z-20 rounded-xl border p-4 shadow-xl ${getNodeClass(
+                    node.kind
+                  )}`}
+                  style={{
+                    left: x,
+                    top: y,
+                    width:
+                      NODE_WIDTH,
+                    minHeight:
+                      NODE_HEIGHT,
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p
+                        className={`text-[10px] font-semibold uppercase tracking-wide ${getNodeLabelClass(
+                          node.kind
+                        )}`}
+                      >
+                        {getNodeLabel(
+                          node.kind
+                        )}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {node.id}
+                      </p>
+                    </div>
+
+                    {node.referenceOrder >
+                      0 && (
+                      <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-500">
+                        {
+                          node.referenceOrder
+                        }
+                      </span>
+                    )}
                   </div>
 
-                  {node.referenceOrder >
-                    0 && (
-                    <span className="rounded-full border border-slate-700 px-2 py-1 text-[10px] text-slate-500">
+                  <p className="mt-2 text-sm font-semibold leading-5 text-slate-100">
+                    {node.name ||
+                      "Etapa sem nome"}
+                  </p>
+
+                  {node.handoffTo && (
+                    <p className="mt-2 truncate text-[10px] text-slate-500">
+                      Handoff →{" "}
                       {
-                        node.referenceOrder
+                        node.handoffTo
                       }
-                    </span>
+                    </p>
                   )}
                 </div>
-
-                <p className="mt-2 text-sm font-semibold leading-5 text-slate-100">
-                  {node.name ||
-                    "Etapa sem nome"}
-                </p>
-
-                {node.handoffTo && (
-                  <p className="mt-2 truncate text-[10px] text-slate-500">
-                    Handoff →{" "}
-                    {
-                      node.handoffTo
-                    }
-                  </p>
-                )}
-              </div>
-            )
-          )}
+              )
+            )}
+          </div>
         </div>
       </div>
 
@@ -770,6 +930,34 @@ function SummaryBadge({
         {value}
       </span>
     </div>
+  );
+}
+
+function MapControlButton({
+  label,
+  title,
+  onClick,
+  disabled = false,
+}: {
+  label: string;
+  title: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      onClick={onClick}
+      disabled={disabled}
+      className={`rounded-lg border px-3 py-2 text-xs font-medium transition ${
+        disabled
+          ? "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-600"
+          : "border-slate-700 bg-slate-950 text-slate-300 hover:border-cyan-700 hover:text-cyan-300"
+      }`}
+    >
+      {label}
+    </button>
   );
 }
 
